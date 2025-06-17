@@ -55,6 +55,9 @@ TEMPLATES = [
     },
 ]
 
+CSRF_TRUSTED_ORIGINS = ["https://zonatdjango-production.up.railway.app"]
+
+
 # WSGI
 WSGI_APPLICATION = "zona_t.wsgi.application"
 
@@ -84,7 +87,7 @@ USE_TZ = True
 # Archivos estáticos
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "core/static"]
-STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Configuración WhiteNoise
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
