@@ -9,7 +9,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Variables de entorno
 SECRET_KEY = config("SECRET_KEY")
 DEBUG = config("DEBUG", default=False, cast=bool)
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="*").split(",")
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS", default="zonatdjango-production.up.railway.app"
+).split(",")
+
 
 # Aplicaciones instaladas
 INSTALLED_APPS = [
@@ -64,9 +67,12 @@ WSGI_APPLICATION = "zona_t.wsgi.application"
 # Configuración de la base de datos (usa DATABASE_URL)
 DATABASES = {
     "default": dj_database_url.config(
-        default=config("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}")
+        default=config("DATABASE_URL"),
+        conn_max_age=600,
+        ssl_require=not config("DEBUG", default=False, cast=bool),
     )
 }
+
 
 # Validación de contraseñas
 AUTH_PASSWORD_VALIDATORS = [
