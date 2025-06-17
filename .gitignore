@@ -1,17 +1,24 @@
-# Python
-*.pyc
-__pycache__/
-
-# Django
-*.sqlite3
-db.sqlite3
-/staticfiles/
-/media/
-
 # Entorno virtual
+env/
 venv/
-.env
+__pycache__/
+*.pyc
+*.pyo
 
-# VSCode u otros IDEs
+# Base de datos local
+*.sqlite3
+
+# Archivos temporales
+*.log
+*.pot
+*.pyc
+*.pyo
+*.db
+*.DS_Store
+
+# Config de VSCode
 .vscode/
-.idea/
+
+# Archivos de despliegue
+railway.json
+.env
