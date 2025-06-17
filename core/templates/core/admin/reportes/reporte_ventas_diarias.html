@@ -1,0 +1,61 @@
+<!-- templates/core/admin/reportes/reporte_ventas_diarias.html -->
+{% extends 'core/base_dashboard.html' %}
+{% block title %}Reporte Diario de Ventas{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+  <h2 class="text-2xl font-bold">📊 Reporte Diario de Ventas</h2>
+  <form method="get" class="flex items-center gap-2">
+    <input type="date" name="fecha" value="{{ fecha }}" class="bg-gray-800 text-white px-3 py-1 rounded" required>
+    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">Filtrar</button>
+    {% if ventas %}
+      <a href="{% url 'exportar_ventas_excel' fecha=fecha %}" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded">Exportar Excel</a>
+    {% endif %}
+  </form>
+</div>
+
+<div class="bg-gray-800 rounded shadow overflow-x-auto">
+  <table class="w-full text-left text-sm">
+    <thead class="bg-gray-700 text-green-300 uppercase">
+      <tr>
+        <th class="px-3 py-2">Factura</th>
+        <th class="px-3 py-2">Cliente</th>
+        <th class="px-3 py-2">Usuario</th>
+        <th class="px-3 py-2">Fecha</th>
+        <th class="px-3 py-2">Tipo de Pago</th>
+        <th class="px-3 py-2">Total</th>
+        <th class="px-3 py-2">Productos</th>
+      </tr>
+    </thead>
+    <tbody class="text-white">
+      {% if ventas %}
+        {% for venta in ventas %}
+          <tr class="border-t border-gray-700 hover:bg-gray-700 transition">
+            <td class="px-3 py-2 text-blue-400 font-mono">{{ venta.numero_factura }}</td>
+            <td class="px-3 py-2">{{ venta.cliente.nombre }}</td>
+            <td class="px-3 py-2 text-zinc-300">{{ venta.usuario.username }}</td>
+            <td class="px-3 py-2">{{ venta.fecha|date:"Y-m-d" }}</td>
+            <td class="px-3 py-2 capitalize">{{ venta.tipo_pago }}</td>
+            <td class="px-3 py-2 text-green-300 font-semibold">${{ venta.total }}</td>
+            <td class="px-3 py-2">
+              <ul class="list-disc ml-5 text-sm text-zinc-300">
+                {% for item in venta.items.all %}
+                  <li>{{ item.producto.reference }} × {{ item.cantidad }}</li>
+                {% endfor %}
+              </ul>
+            </td>
+          </tr>
+        {% endfor %}
+      {% else %}
+        <tr>
+          <td colspan="7" class="text-center py-4 text-gray-400">No se registraron ventas para esta fecha.</td>
+        </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+{% if ventas %}
+  <p class="text-right mt-4 text-white font-bold">🧾 Total del día: ${{ total_dia }}</p>
+{% endif %}
+{% endblock %}

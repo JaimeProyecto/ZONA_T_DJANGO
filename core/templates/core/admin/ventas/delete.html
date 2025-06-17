@@ -1,0 +1,23 @@
+{% extends "core/base_dashboard.html" %}
+{% block title %}Anular Venta – ZONA T{% endblock %}
+{% block header %}Anulación de Factura{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto mt-12 bg-zinc-800 p-6 rounded-2xl shadow-lg text-center">
+  <h2 class="text-2xl font-bold text-red-400 mb-4">⚠️ ¿Deseas anular esta venta?</h2>
+  <p class="text-sm text-zinc-300 mb-6">
+    Esta acción <span class="text-red-300 font-semibold">restaurará el stock</span> y marcará la venta como <span class="italic">anulada</span>.
+    <br>No se puede deshacer.
+  </p>
+
+  <form method="POST" class="space-y-4">
+    {% csrf_token %}
+    <button type="submit" class="bg-red-600 hover:bg-red-700 text-white font-bold px-6 py-2 rounded shadow">
+      🗑 Sí, anular venta
+    </button>
+    <div>
+      <a href="{% url 'venta_list' %}" class="text-zinc-400 hover:underline">Cancelar y volver</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

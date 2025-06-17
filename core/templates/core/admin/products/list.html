@@ -1,0 +1,67 @@
+{% extends 'core/base_dashboard.html' %}
+{% block title %}Consulta y actualización de productos – ZONA T{% endblock %}
+{% block content %}
+
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+  <h2 class="text-2xl font-bold">📦 Consulta y actualización de productos</h2>
+  <div class="flex flex-wrap gap-2">
+    <a href="{% url 'product_create' %}" class="bg-green-500 text-black px-4 py-2 rounded hover:bg-green-600">
+      ➕ Registrar producto
+    </a>
+    <a href="{% url 'cargar_productos' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+      📥 Cargar desde Excel
+    </a>
+  </div>
+</div>
+
+
+<form method="get" class="mb-4 flex items-center gap-2">
+  <input 
+    type="text" 
+    name="buscar" 
+    placeholder="Buscar por referencia o descripción"
+    value="{{ request.GET.buscar }}"
+    class="px-4 py-2 w-full md:w-1/3 rounded bg-zinc-800 text-white border border-zinc-700 focus:outline-none"
+  >
+  <button type="submit" class="bg-green-600 hover:bg-green-700 text-black px-4 py-2 rounded">
+    🔍 Buscar
+  </button>
+</form>
+
+<div class="overflow-x-auto">
+  <table class="min-w-full bg-zinc-800 border border-zinc-700 rounded">
+    <thead class="bg-zinc-700 text-white">
+      <tr>
+        <th class="py-2 px-4 border-b border-zinc-600 text-left">#</th>
+        <th class="py-2 px-4 border-b border-zinc-600 text-left">Referencia</th>
+        <th class="py-2 px-4 border-b border-zinc-600 text-left">Descripción</th>
+        <th class="py-2 px-4 border-b border-zinc-600 text-left">Precio de Compra</th>
+        <th class="py-2 px-4 border-b border-zinc-600 text-left">Precio de Venta</th>
+        <th class="py-2 px-4 border-b border-zinc-600 text-left">Stock</th>
+        <th class="py-2 px-4 border-b border-zinc-600 text-left">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+  {% for product in products %}
+  <tr class="hover:bg-zinc-700">
+    <td class="py-2 px-4 border-b border-zinc-700">{{ forloop.counter }}</td>
+    <td class="py-2 px-4 border-b border-zinc-700">{{ product.reference }}</td>
+    <td class="py-2 px-4 border-b border-zinc-700">{{ product.description }}</td>
+    <td class="py-2 px-4 border-b border-zinc-700">${{ product.purchase_price }}</td>
+    <td class="py-2 px-4 border-b border-zinc-700">${{ product.sale_price }}</td>
+    <td class="py-2 px-4 border-b border-zinc-700">{{ product.stock }}</td>
+    <td class="py-2 px-4 border-b border-zinc-700">
+      <a href="{% url 'product_edit' product.id %}" class="text-green-400 hover:underline">✏️ Editar</a>
+    </td>
+  </tr>
+  {% empty %}
+  <tr>
+    <td colspan="7" class="text-center py-4 text-zinc-400">No se encontraron productos para esta búsqueda.</td>
+  </tr>
+  {% endfor %}
+</tbody>
+
+  </table>
+</div>
+
+{% endblock %}

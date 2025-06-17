@@ -1,0 +1,24 @@
+{% extends 'core/base_dashboard.html' %}
+{% block title %}Cargar productos{% endblock %}
+
+{% block content %}
+<div class="p-6 bg-gray-900 rounded-lg shadow-lg text-white">
+    <h1 class="text-2xl font-bold mb-4">📥 Cargar productos desde Excel</h1>
+
+    {% if messages %}
+        <ul class="mb-4">
+            {% for message in messages %}
+                <li class="text-green-400">{{ message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data" class="space-y-4">
+        {% csrf_token %}
+        <input type="file" name="archivo" accept=".xlsx" required class="bg-gray-800 border border-gray-700 p-2 rounded w-full text-white">
+        <button type="submit" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white">
+            Subir archivo
+        </button>
+    </form>
+</div>
+{% endblock %}

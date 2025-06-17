@@ -1,0 +1,10 @@
+{% extends 'core/base_dashboard.html' %}
+{% block sidebar_menu %}
+    {# mismo menú que admin_dashboard.html #}
+{% endblock %}
+{% block header %}Gestión de Pagos{% endblock %}
+{% block content %}
+<div class="button-group">
+    <a href="{% url 'payment_create' %}" class="btn btn-success">💵 Registrar Pago</a>
+</div>
+{% endblock %}

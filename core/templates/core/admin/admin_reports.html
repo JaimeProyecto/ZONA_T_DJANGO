@@ -1,0 +1,12 @@
+{% extends 'core/base_dashboard.html' %}
+{% block sidebar_menu %}
+    {# mismo menú que admin_dashboard.html #}
+{% endblock %}
+{% block header %}Reportes{% endblock %}
+{% block content %}
+<div class="button-group">
+    <a href="{% url 'report_daily_sales' %}" class="btn btn-primary">📅 Ventas Diarias</a>
+    <a href="{% url 'report_debt_clients' %}" class="btn btn-warning">📉 Clientes Deudores</a>
+    <a href="{% url 'report_top_products' %}" class="btn btn-success">📈 Top Productos</a>
+</div>
+{% endblock %}

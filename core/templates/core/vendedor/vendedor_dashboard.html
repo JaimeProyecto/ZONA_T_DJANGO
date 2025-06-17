@@ -1,0 +1,26 @@
+<!-- templates/core/vendedor_dashboard.html -->
+{% extends 'core/base_dashboard.html' %}
+{% block title %}Vendedor – ZONA T{% endblock %}
+{% load static %}
+{% block content %}
+  <div id="inicio" class="contenido-dinamico">
+    <h2 class="text-3xl font-bold mb-4">Bienvenido, Vendedor</h2>
+    <p>Panel de ventas y consultas.</p>
+  </div>
+
+  <div id="ventas" class="contenido-dinamico hidden">
+    <h2 class="text-2xl font-semibold mb-2">Gestión de Ventas</h2>
+    <ul class="list-disc ml-6 space-y-1">
+      <li><a href="#" class="text-green-400 hover:underline">➕ Registrar venta</a></li>
+      <li><a href="#" class="text-green-400 hover:underline">❌ Anular factura</a></li>
+    </ul>
+  </div>
+
+  <div id="clientes" class="contenido-dinamico hidden">
+    <h2 class="text-2xl font-semibold mb-2">Gestión de Clientes</h2>
+    <ul class="list-disc ml-6 space-y-1">
+      <li><a href="#" class="text-green-400 hover:underline">➕ Registrar cliente</a></li>
+      <li><a href="#" class="text-green-400 hover:underline">📜 Historial de compras</a></li>
+    </ul>
+  </div>
+{% endblock %}

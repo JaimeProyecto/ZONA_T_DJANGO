@@ -1,0 +1,59 @@
+{% extends "core/base_dashboard.html" %}
+{% load widget_tweaks %}
+{% block title %}Clientes – ZONA T{% endblock %}
+{% block header %}Gestión de Clientes{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto mt-8">
+  <!-- Título -->
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-2xl font-bold text-green-400 flex items-center gap-2">
+      📋 Lista de Clientes
+    </h2>
+  </div>
+
+  <!-- Buscador -->
+  <form method="GET" class="mb-6">
+    <input
+      type="text"
+      name="q"
+      placeholder="Buscar por nombre o cédula..."
+      value="{{ query }}"
+      class="w-full md:w-96 px-4 py-2 rounded-lg bg-zinc-800 text-white placeholder-zinc-400 border border-zinc-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+      autocomplete="off"
+    />
+  </form>
+
+  <!-- Tabla -->
+  <div class="overflow-x-auto rounded-2xl shadow-lg">
+    <table class="w-full bg-zinc-800">
+      <thead class="bg-zinc-700 text-left text-sm text-white">
+        <tr>
+          <th class="px-4 py-2">#</th>
+          <th class="px-4 py-2">Nombre</th>
+          <th class="px-4 py-2">Teléfono</th>
+          <th class="px-4 py-2">Dirección</th>
+          <th class="px-4 py-2 text-right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cliente in clientes %}
+          <tr class="border-b border-zinc-700 text-sm hover:bg-zinc-700">
+            <td class="px-4 py-2">{{ cliente.id }}</td>
+            <td class="px-4 py-2">{{ cliente.nombre }}</td>
+            <td class="px-4 py-2">{{ cliente.telefono }}</td>
+            <td class="px-4 py-2">{{ cliente.direccion }}</td>
+            <td class="px-4 py-2 text-right space-x-2 whitespace-nowrap">
+              <a href="{% url 'cliente_historial' cliente.id %}" class="text-blue-400 hover:underline">🕓 Historial</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5" class="px-4 py-4 text-center text-zinc-400">No hay clientes registrados.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

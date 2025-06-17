@@ -1,0 +1,62 @@
+{% extends 'core/base_dashboard.html' %}
+{% block title %}Editar Producto{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto bg-zinc-900 p-6 rounded shadow-lg">
+  <h1 class="text-2xl font-bold text-yellow-400 mb-6 flex items-center">
+    📝 Editar producto
+  </h1>
+
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+
+    <!-- Referencia -->
+    <div>
+      <label class="block mb-1">Referencia</label>
+      <input type="text" name="reference" value="{{ producto.reference }}" class="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded">
+    </div>
+
+    <!-- Descripción -->
+    <div>
+      <label class="block mb-1">Descripción</label>
+      <input type="text" name="description" value="{{ producto.description }}" class="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded">
+    </div>
+
+    <!-- Precio de Compra -->
+    <div>
+      <label class="block mb-1">Precio de Compra</label>
+      <input type="number" name="purchase_price" value="{{ producto.purchase_price }}" step="0.01" class="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded">
+    </div>
+
+    <!-- Precio de Venta -->
+    <div>
+      <label class="block mb-1">Precio de Venta</label>
+      <input type="number" name="sale_price" value="{{ producto.sale_price }}" step="0.01" class="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded">
+    </div>
+
+    <!-- Stock actual -->
+    <div>
+      <label class="block mb-1">Stock actual</label>
+      <input type="number" name="stock_actual" value="{{ producto.stock }}" readonly class="w-full px-4 py-2 bg-zinc-700 text-zinc-400 rounded">
+    </div>
+
+    <!-- Agregar al stock -->
+    <div>
+      <label class="block mb-1">Agregar al stock</label>
+      <input type="number" name="stock_add" value="0" class="w-full px-4 py-2 bg-zinc-800 border border-zinc-700 rounded">
+    </div>
+
+    <!-- Stock final -->
+    <div class="text-green-400 font-medium mt-2 flex items-center gap-2">
+      📦 <span>Stock final: {{ producto.stock }}</span>
+    </div>
+
+    <!-- Botón -->
+    <div class="mt-6">
+      <button type="submit" class="bg-yellow-400 hover:bg-yellow-500 text-black font-semibold px-6 py-2 rounded flex items-center gap-2">
+        💾 Actualizar producto
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

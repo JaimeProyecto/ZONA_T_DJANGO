@@ -1,0 +1,39 @@
+{% extends "core/base_dashboard.html" %}
+{% block title %}Registrar Abono – ZONA T{% endblock %}
+{% block header %}Registrar Abono{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto bg-gray-800 bg-opacity-60 p-6 rounded-lg shadow-lg">
+
+  {% if messages %}
+    {% for message in messages %}
+      <div class="mb-4 p-3 rounded bg-green-600 text-black font-semibold shadow">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <h2 class="text-2xl font-bold text-green-400 flex items-center mb-6">
+    💰 <span class="ml-2">Registrar Abono</span>
+  </h2>
+
+  <form method="post">
+    {% csrf_token %}
+
+    <div class="mb-4">
+      <label class="block text-sm font-semibold text-green-300 mb-1">Venta:</label>
+      {{ form.venta }}
+    </div>
+
+    <div class="mb-6">
+      <label class="block text-sm font-semibold text-green-300 mb-1">Monto:</label>
+      {{ form.monto }}
+    </div>
+
+    <button type="submit" class="bg-green-500 hover:bg-green-600 text-black font-bold py-2 px-4 rounded w-full shadow-md">
+      Registrar 💾
+    </button>
+  </form>
+
+</div>
+{% endblock %}

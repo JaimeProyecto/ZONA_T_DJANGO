@@ -1,0 +1,42 @@
+{% extends 'core/base_dashboard.html' %}
+{% block title %}Clientes con Deuda – ZONA T{% endblock %}
+{% block header %}Reporte: Clientes con Deuda{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto mt-10 bg-zinc-800 text-white p-6 rounded-2xl shadow-lg">
+  <h2 class="text-2xl font-bold text-red-400 mb-6">💸 Clientes con Deudas</h2>
+
+  <div class="mb-6 flex justify-between items-center">
+    <form method="get" class="flex space-x-2">
+      <input type="text" name="q" placeholder="Buscar cliente..." value="{{ request.GET.q }}" class="rounded px-4 py-2 bg-zinc-900 border border-zinc-600 text-white" />
+      <button type="submit" class="bg-green-600 text-black font-bold px-4 py-2 rounded hover:bg-green-700">🔍 Buscar</button>
+    </form>
+    <a href="{% url 'exportar_clientes_deuda_excel' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">📤 Exportar a Excel</a>
+  </div>
+
+  <table class="w-full bg-zinc-900 rounded text-white text-sm">
+    <thead>
+      <tr class="bg-zinc-700 text-left">
+        <th class="p-3">Cliente</th>
+        <th class="p-3">Teléfono</th>
+        <th class="p-3">Ciudad</th>
+        <th class="p-3">Deuda ($)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for cliente in clientes %}
+        <tr class="border-t border-zinc-700 hover:bg-zinc-800 transition">
+          <td class="p-3">{{ cliente.nombre }}</td>
+          <td class="p-3">{{ cliente.telefono }}</td>
+          <td class="p-3">{{ cliente.ciudad }}</td>
+          <td class="p-3 text-red-400 font-semibold">${{ cliente.deuda_total|floatformat:0 }}</td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="4" class="text-center text-zinc-400 py-4">No hay clientes con deudas.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

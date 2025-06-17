@@ -1,0 +1,59 @@
+{% extends 'core/base_dashboard.html' %}
+{% block title %}Productos Más Vendidos – ZONA T{% endblock %}
+
+{% block content %}
+<h2 class="text-3xl font-bold mb-6 text-green-400">📦 Productos Más Vendidos</h2>
+
+<!-- Filtros -->
+<form method="get" class="mb-6 flex flex-wrap items-end gap-4">
+  <div>
+    <label for="fecha_inicio" class="block text-sm text-gray-300">Desde:</label>
+    <input type="date" name="fecha_inicio" id="fecha_inicio"
+           value="{{ request.GET.fecha_inicio }}"
+           class="bg-zinc-800 border border-zinc-600 text-white px-3 py-1 rounded" />
+  </div>
+
+  <div>
+    <label for="fecha_fin" class="block text-sm text-gray-300">Hasta:</label>
+    <input type="date" name="fecha_fin" id="fecha_fin"
+           value="{{ request.GET.fecha_fin }}"
+           class="bg-zinc-800 border border-zinc-600 text-white px-3 py-1 rounded" />
+  </div>
+
+  <button type="submit"
+          class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition">
+    🔍 Filtrar
+  </button>
+
+  <a href="{% url 'exportar_productos_mas_vendidos_excel' %}?fecha_inicio={{ request.GET.fecha_inicio }}&fecha_fin={{ request.GET.fecha_fin }}"
+     class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition">
+    ⬇️ Exportar Excel
+  </a>
+</form>
+
+<!-- Tabla de resultados -->
+<div class="overflow-x-auto bg-zinc-800 rounded-xl shadow-lg">
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="bg-zinc-700 text-white text-left">
+        <th class="px-4 py-2">Producto</th>
+        <th class="px-4 py-2">Unidades Vendidas</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for producto in productos %}
+        <tr class="border-b border-zinc-700 hover:bg-zinc-700 transition">
+          <td class="px-4 py-2">{{ producto.nombre }}</td>
+          <td class="px-4 py-2 text-green-400 font-semibold">{{ producto.total_vendido }}</td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="2" class="px-4 py-4 text-center text-zinc-400">
+            No se encontraron ventas para este período.
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

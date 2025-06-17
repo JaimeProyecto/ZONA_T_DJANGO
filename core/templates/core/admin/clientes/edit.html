@@ -1,0 +1,58 @@
+<!-- templates/core/admin/clientes/edit.html -->
+{% extends "core/base_dashboard.html" %}
+{% load widget_tweaks %}
+
+{% block title %}Editar Cliente – ZONA T{% endblock %}
+{% block header %}Gestión de Clientes{% endblock %}
+
+{% block content %}
+<div class="max-w-xl mx-auto mt-10 bg-zinc-800 text-white p-6 rounded-2xl shadow-lg">
+  <h2 class="text-xl font-bold text-green-400 mb-4">✏️ Editar Cliente</h2>
+
+  <form method="POST" class="space-y-4">
+    {% csrf_token %}
+    
+    <div>
+      <label class="block text-sm text-zinc-300 mb-1">Nombre completo</label>
+      {{ form.nombre|add_class:"w-full p-2 rounded bg-zinc-900 border border-zinc-600" }}
+    </div>
+    
+    <div>
+      <label class="block text-sm text-zinc-300 mb-1">Cédula</label>
+      {{ form.cedula|add_class:"w-full p-2 rounded bg-zinc-900 border border-zinc-600" }}
+    </div>
+    
+    <div>
+      <label class="block text-sm text-zinc-300 mb-1">Teléfono</label>
+      {{ form.telefono|add_class:"w-full p-2 rounded bg-zinc-900 border border-zinc-600" }}
+    </div>
+    
+    <div>
+      <label class="block text-sm text-zinc-300 mb-1">Ciudad</label>
+      {{ form.ciudad|add_class:"w-full p-2 rounded bg-zinc-900 border border-zinc-600" }}
+    </div>
+    
+    <div>
+      <label class="block text-sm text-zinc-300 mb-1">Dirección</label>
+      {{ form.direccion|add_class:"w-full p-2 rounded bg-zinc-900 border border-zinc-600" }}
+    </div>
+    
+    <div>
+      <label class="block text-sm text-zinc-300 mb-1">Correo electrónico</label>
+      {{ form.correo|add_class:"w-full p-2 rounded bg-zinc-900 border border-zinc-600" }}
+    </div>
+    
+    <div class="flex items-center">
+      {{ form.estado }}
+      <label for="id_estado" class="ml-2 text-sm text-zinc-400">Cliente activo</label>
+    </div>
+
+    <div class="flex justify-between mt-6">
+      <a href="{% url 'cliente_list' %}" class="text-sm text-zinc-400 hover:text-white">← Cancelar</a>
+      <button type="submit" class="bg-green-500 hover:bg-green-600 text-black font-bold py-2 px-4 rounded">
+        💾 Guardar cambios
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}

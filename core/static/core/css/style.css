@@ -1,0 +1,121 @@
+/* --- LOGIN --- */
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: url('../img/fondo-login.jpg') no-repeat center center fixed;
+    background-size: cover;
+    color: #00ff90;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.login-container {
+    background-color: rgba(0, 0, 0, 0.85);
+    padding: 2rem;
+    border: 2px solid #00ff90;
+    border-radius: 12px;
+    text-align: center;
+    width: 320px;
+    box-shadow: 0 0 20px #00ff90;
+}
+
+.logo {
+    width: 210px;
+    margin-bottom: 10px;
+}
+
+h2 {
+    margin-bottom: 20px;
+    color: #00ff90;
+}
+
+input, button {
+    display: block;
+    width: 100%;
+    padding: 0.6rem;
+    margin: 12px 0;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+input {
+    background-color: #222;
+    color: #0f0;
+}
+input::placeholder {
+    color: #666;
+}
+button {
+    background-color: #00ff90;
+    color: #000;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+button:hover {
+    background-color: #00cc70;
+}
+.error {
+    color: #ff4040;
+    font-size: 0.9rem;
+    margin-top: 10px;
+}
+
+/* --- DASHBOARD --- */
+.container {
+    display: flex;
+    height: 100vh;
+}
+
+.sidebar {
+    width: 250px;
+    background-color: #1e1e1e;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px 10px;
+}
+.sidebar .logo {
+    width: 80px;
+    margin-bottom: 10px;
+}
+.nav-menu {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+.nav-menu a {
+    text-decoration: none;
+    color: #f1f1f1;
+    padding: 12px;
+    border: 1px solid #333;
+    margin: 5px 0;
+    border-radius: 8px;
+    background-color: #2a2a2a;
+    text-align: center;
+    transition: 0.3s;
+}
+.nav-menu a:hover {
+    background-color: #00ff90;
+    color: #000;
+}
+.main-content {
+    flex: 1;
+    background-color: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+}
+.topbar {
+    padding: 20px;
+    border-bottom: 1px solid #333;
+    background-color: #2b2b2b;
+}
+.content-section {
+    padding: 30px;
+    flex: 1;
+    overflow-y: auto;
+}

@@ -1,0 +1,11 @@
+{% extends 'core/base_dashboard.html' %}
+{% block sidebar_menu %}
+    {# mismo menú que admin_dashboard.html #}
+{% endblock %}
+{% block header %}Gestión de Productos{% endblock %}
+{% block content %}
+<div class="button-group">
+    <a href="{% url 'product_create' %}" class="btn btn-success">➕ Registrar Producto</a>
+    <a href="{% url 'admin_product_list' %}" class="btn btn-primary">📦 Ver / Editar Inventario</a>
+</div>
+{% endblock %}
