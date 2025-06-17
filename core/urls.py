@@ -6,7 +6,7 @@ from django.shortcuts import redirect
 
 urlpatterns = [
     # --- Autenticación y redirección por rol ---
-    path("", lambda request: redirect("login")),
+    path("", lambda request: redirect("/login/")),
     path("login/", views.login_view, name="login"),
     path("redirect-by-role/", views.redirect_by_role, name="redirect_by_role"),
     # --- Dashboards ---
