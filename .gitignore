@@ -20,5 +20,4 @@ __pycache__/
 .vscode/
 
 # Archivos de despliegue
-railway.json
 .env

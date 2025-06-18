@@ -1,0 +1,11 @@
+{
+  "build": {
+    "env": {
+      "PYTHON_VERSION": "3.11"
+    },
+    "command": "pip install -r requirements.txt"
+  },
+    "deploy": {
+    "startCommand": "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn zona_t.wsgi:application"
+  }
+}
