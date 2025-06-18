@@ -243,8 +243,8 @@ def cliente_edit(request, cliente_id):
 
 
 @login_required
-def cliente_delete(request, pk):
-    cliente = get_object_or_404(Cliente, pk=pk)
+def cliente_delete(request, cliente_id):
+    cliente = get_object_or_404(Cliente, id=cliente_id)
     if request.method == "POST":
         cliente.delete()
         if request.user.is_superuser:
