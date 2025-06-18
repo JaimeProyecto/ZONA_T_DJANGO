@@ -586,18 +586,28 @@ def saldo_pendiente_admin(request):
 @user_passes_test(es_vendedor, login_url="login")
 def saldo_pendiente(request):
     query = request.GET.get("q", "").strip()
-    todas = (
+
+    qs = (
         Venta.objects.filter(usuario=request.user, tipo_pago="credito")
         .select_related("cliente")
         .order_by("-fecha")
     )
+    if query:
+        qs = qs.filter(
+            Q(cliente__nombre__icontains=query) | Q(numero_factura__icontains=query)
+        )
+
     ventas = []
-    for v in todas:
+    for v in qs:
         saldo = v.calcular_saldo_pendiente()
         if saldo > 0:
-            ultimo = v.abonos.order_by("-fecha").first()
             v.saldo = saldo
-            v.ultimo_abono_por = ultimo.usuario.username if ultimo else None
+            # Último abono
+            ultimo = v.abonos.order_by("-fecha").first()
+            v.ultimo_abono_por = (
+                ultimo.usuario.username if (ultimo and ultimo.usuario) else None
+            )
+            v.ultimo_abono_monto = ultimo.monto if ultimo else None
             ventas.append(v)
 
     return render(
