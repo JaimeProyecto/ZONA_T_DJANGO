@@ -1,17 +1,37 @@
-<!-- templates/core/admin/reportes/reporte_ventas_diarias.html -->
+{# core/templates/core/admin/reportes/reporte_ventas_diarias.html #}
 {% extends 'core/base_dashboard.html' %}
 {% block title %}Reporte Diario de Ventas{% endblock %}
 
 {% block content %}
 <div class="flex justify-between items-center mb-6">
   <h2 class="text-2xl font-bold">📊 Reporte Diario de Ventas</h2>
-  <form method="get" class="flex items-center gap-2">
-    <input type="date" name="fecha" value="{{ fecha }}" class="bg-gray-800 text-white px-3 py-1 rounded" required>
-    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded">Filtrar</button>
+  <div class="flex items-center gap-2">
+    <form method="get" class="flex items-center gap-2">
+      <input
+        type="date"
+        name="fecha"
+        value="{{ fecha }}"
+        class="bg-gray-800 text-white px-3 py-1 rounded"
+        required
+      >
+      <button
+        type="submit"
+        class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
+      >
+        Filtrar
+      </button>
+    </form>
+
+    {# Botón de exportar solo si hay ventas #}
     {% if ventas %}
-      <a href="{% url 'exportar_ventas_excel' fecha=fecha %}" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded">Exportar Excel</a>
+      <a
+        href="{% url 'exportar_ventas_excel' fecha=fecha %}"
+        class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded"
+      >
+        📥 Exportar Excel
+      </a>
     {% endif %}
-  </form>
+  </div>
 </div>
 
 <div class="bg-gray-800 rounded shadow overflow-x-auto">
@@ -48,7 +68,9 @@
         {% endfor %}
       {% else %}
         <tr>
-          <td colspan="7" class="text-center py-4 text-gray-400">No se registraron ventas para esta fecha.</td>
+          <td colspan="7" class="text-center py-4 text-gray-400">
+            No se registraron ventas para esta fecha.
+          </td>
         </tr>
       {% endif %}
     </tbody>
