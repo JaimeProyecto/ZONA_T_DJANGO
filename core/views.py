@@ -518,7 +518,6 @@ def venta_delete(request, venta_id):
 
 # --- Pagos ---
 @login_required
-@user_passes_test(es_admin, login_url="login")  # <— si sólo admin puede abonar
 def registrar_abono(request):
     venta_id = request.GET.get("venta_id")
 
