@@ -5,11 +5,17 @@
 
 {% block content %}
 <div class="max-w-6xl mx-auto mt-8">
-  <!-- Título -->
+  <!-- Título y botón Crear -->
   <div class="flex items-center justify-between mb-4">
     <h2 class="text-2xl font-bold text-green-400 flex items-center gap-2">
       📋 Lista de Clientes
     </h2>
+    <a
+      href="{% url 'cliente_create' %}"
+      class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-semibold"
+    >
+      ➕ Crear Cliente
+    </a>
   </div>
 
   <!-- Buscador -->

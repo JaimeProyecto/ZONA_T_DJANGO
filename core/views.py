@@ -208,9 +208,14 @@ def cliente_create(request):
             if request.user.is_superuser:
                 return redirect("admin_cliente_list")
             return redirect("vendedor_cliente_list")
-    else:
-        form = ClienteForm()
-    return render(request, "core/admin/clientes/create.html", {"form": form})
+
+        template = (
+            "core/admin/clientes/create.html"
+            if request.user.is_superuser
+            else "core/vendedor/clientes/create.html"
+        )
+
+        return render(request, template, {"form": form})
 
 
 def cliente_historial(request, pk):
