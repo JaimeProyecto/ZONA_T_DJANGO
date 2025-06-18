@@ -558,7 +558,10 @@ def saldo_pendiente_admin(request):
             v.saldo = saldo
             # busca el último abono relacionado
             ultimo = v.abonos.order_by("-fecha").first()
-            v.ultimo_abono_por = ultimo.usuario.username if ultimo else None
+            if ultimo and ultimo.usuario:
+                v.ultimo_abono_por = ultimo.usuario.username
+            else:
+                v.ultimo_abono_por = None
             ventas.append(v)
 
     # 3. Renderiza pasándole la lista enriquecida
