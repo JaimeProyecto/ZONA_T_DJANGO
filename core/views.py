@@ -768,45 +768,41 @@ def exportar_clientes_deuda_excel(request):
     return response
 
 
+# core/views.py
 def exportar_productos_mas_vendidos_excel(request):
     fecha_inicio = request.GET.get("fecha_inicio")
     fecha_fin = request.GET.get("fecha_fin")
 
-    ventas = VentaItem.objects.all()
-
+    # 1. Filtra los items de venta según fechas (si las proporcionas)
+    items = VentaItem.objects.select_related("producto", "venta")
     if fecha_inicio:
-        ventas = ventas.filter(venta__fecha__gte=fecha_inicio)
+        items = items.filter(venta__fecha__date__gte=fecha_inicio)
     if fecha_fin:
-        ventas = ventas.filter(venta__fecha__lte=fecha_fin)
+        items = items.filter(venta__fecha__date__lte=fecha_fin)
 
+    # 2. Agrupa por producto__description (campo correcto) y suma cantidades
     productos = (
-        ventas.values("producto__descripcion")
+        items.values("producto__description")
         .annotate(total_vendido=Sum("cantidad"))
         .order_by("-total_vendido")
     )
 
-    # Convertir a DataFrame para exportar
-    data = [
-        {
-            "Producto": p["producto__descripcion"],
-            "Unidades Vendidas": p["total_vendido"],
-        }
-        for p in productos
-    ]
-    df = pd.DataFrame(data)
+    # 3. Crea el Excel
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Productos Más Vendidos"
 
-    # Preparar respuesta HTTP con archivo Excel
-    fecha_hora = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    filename = f"productos_mas_vendidos_{fecha_hora}.xlsx"
+    # Cabecera
+    ws.append(["Producto", "Unidades Vendidas"])
+    for p in productos:
+        ws.append([p["producto__description"], p["total_vendido"]])
 
+    # 4. Envía el archivo al cliente
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    response["Content-Disposition"] = f'attachment; filename="{filename}"'
-
-    with pd.ExcelWriter(response, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="Productos Más Vendidos")
-
+    response["Content-Disposition"] = "attachment; filename=productos_mas_vendidos.xlsx"
+    wb.save(response)
     return response
 
 
