@@ -49,7 +49,8 @@ class ProductForm(forms.ModelForm):
 class ClienteForm(forms.ModelForm):
     class Meta:
         model = Cliente
-        fields = "__all__"
+
+        exclude = ["creado_por"]
 
         widgets = {
             "nombre": forms.TextInput(attrs={"class": "form-input"}),

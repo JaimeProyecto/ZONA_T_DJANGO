@@ -221,6 +221,7 @@ def cliente_historial(request, pk):
     )
 
 
+@login_required
 def cliente_edit(request, cliente_id):
     cliente = get_object_or_404(Cliente, id=cliente_id)
 
@@ -237,6 +238,7 @@ def cliente_edit(request, cliente_id):
     )
 
 
+@login_required
 def cliente_delete(request, pk):
     cliente = get_object_or_404(Cliente, pk=pk)
     if request.method == "POST":
