@@ -507,6 +507,7 @@ def venta_delete(request, venta_id):
 
 # --- Pagos ---
 @login_required
+@user_passes_test(es_admin, login_url="login")  # <— si sólo admin puede abonar
 def registrar_abono(request):
     venta_id = request.GET.get("venta_id")
 
@@ -514,11 +515,19 @@ def registrar_abono(request):
         form = AbonoForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect("saldo_pendiente")
+            # Redirige al listado de saldos pendientes según rol
+            if request.user.is_superuser:
+                return redirect("saldo_pendiente_admin")
+            else:
+                return redirect("saldo_pendiente")
     else:
         form = AbonoForm(initial={"venta": venta_id}) if venta_id else AbonoForm()
 
-    return render(request, "core/admin/pagos/registrar_abono.html", {"form": form})
+    return render(
+        request,
+        "core/admin/pagos/registrar_abono.html",  # o core/vendedor/... si tienes plantilla distinta
+        {"form": form},
+    )
 
 
 @login_required
