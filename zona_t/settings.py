@@ -7,11 +7,17 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Variables de entorno
-SECRET_KEY = config("SECRET_KEY")
-DEBUG = config("DEBUG", default=False, cast=bool)
-ALLOWED_HOSTS = config(
-    "ALLOWED_HOSTS", default="zonatdjango-production.up.railway.app"
-).split(",")
+# SECRET_KEY = config("SECRET_KEY")
+# DEBUG = config("DEBUG", default=False, cast=bool)
+# ALLOWED_HOSTS = config(
+# "ALLOWED_HOSTS", default="zonatdjango-production.up.railway.app"
+# ).split(",")
+
+# DEBUG desde variable de entorno (por defecto False)
+DEBUG = os.getenv("DEBUG", "False") == "True"
+
+# Mientras debugueas, dejamos cualquier host
+ALLOWED_HOSTS = ["*"]
 
 
 # Aplicaciones instaladas
