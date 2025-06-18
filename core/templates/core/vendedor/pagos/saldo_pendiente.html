@@ -1,27 +1,34 @@
-<!-- templates/core/admin/pagos/saldo_pendiente.html -->
+{# core/templates/core/vendedor/pagos/saldo_pendiente.html #}
 {% extends "core/base_dashboard.html" %}
 {% block title %}Saldo Pendiente{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto bg-gray-800 p-6 rounded shadow">
-
   <h2 class="text-xl font-bold text-green-400 mb-4">📊 Saldos Pendientes</h2>
 
   <!-- Formulario de búsqueda -->
   <form method="get" class="mb-6">
     <div class="flex items-center space-x-2">
-      <input type="text" name="q" placeholder="Buscar por cliente o factura..." value="{{ request.GET.q }}"
-             class="w-full px-4 py-2 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400"
-             autocomplete="on">
-      <button type="submit" class="bg-green-500 text-black font-bold px-4 py-2 rounded hover:bg-green-600">
+      <input
+        type="text"
+        name="q"
+        placeholder="Buscar por cliente o factura..."
+        value="{{ query }}"
+        class="w-full px-4 py-2 rounded bg-gray-700 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400"
+        autocomplete="on"
+      >
+      <button
+        type="submit"
+        class="bg-green-500 text-black font-bold px-4 py-2 rounded hover:bg-green-600"
+      >
         🔍 Buscar
       </button>
     </div>
   </form>
 
   <table class="min-w-full bg-gray-900 rounded">
-    <thead>
-      <tr class="bg-gray-700 text-white text-left text-sm">
+    <thead class="bg-gray-700 text-white text-left text-sm">
+      <tr>
         <th class="px-4 py-2">Factura</th>
         <th class="px-4 py-2">Cliente</th>
         <th class="px-4 py-2 text-right">Total</th>
@@ -31,26 +38,38 @@
     </thead>
     <tbody>
       {% for venta in ventas %}
-      <tr class="border-b border-gray-700 text-white text-sm">
-        <td class="px-4 py-2">#{{ venta.id }}</td>
+      <tr class="border-b border-gray-700 text-white text-sm hover:bg-gray-800">
+        <td class="px-4 py-2 font-mono text-blue-400">
+          <a href="{% url 'venta_vendedor_detail' venta.id %}" class="hover:underline">
+            #{{ venta.numero_factura }}
+          </a>
+        </td>
         <td class="px-4 py-2">{{ venta.cliente.nombre }}</td>
         <td class="px-4 py-2 text-right">${{ venta.total }}</td>
-        <td class="px-4 py-2 text-right">${{ venta.total_abonos }}</td>
         <td class="px-4 py-2 text-right">
-          {% if venta.saldo_pendiente > 0 %}
-            <div class="flex flex-col items-end">
-              <span class="text-yellow-400 mb-1">${{ venta.saldo_pendiente }}</span>
-              <a href="{% url 'registrar_abono' %}?venta_id={{ venta.id }}"
-                 class="text-blue-400 hover:underline text-sm">➕ Abonar</a>
-            </div>
+          {{ venta.total|floatformat:2|add:"-"|add:venta.saldo|floatformat:2 }}
+        </td>
+        <td class="px-4 py-2 text-right">
+          {% if venta.saldo > 0 %}
+          <div class="flex flex-col items-end">
+            <span class="text-yellow-400 mb-1">${{ venta.saldo }}</span>
+            <a
+              href="{% url 'registrar_abono' %}?venta_id={{ venta.id }}"
+              class="text-blue-400 hover:underline text-sm"
+            >
+              ➕ Abonar
+            </a>
+          </div>
           {% else %}
-            <span class="text-green-400">✔ Pagado</span>
+          <span class="text-green-400">✔ Pagado</span>
           {% endif %}
         </td>
       </tr>
       {% empty %}
       <tr>
-        <td colspan="5" class="text-center text-gray-400 py-4">No se encontraron resultados.</td>
+        <td colspan="5" class="text-center text-gray-400 py-4">
+          No hay ventas a crédito con saldo pendiente.
+        </td>
       </tr>
       {% endfor %}
     </tbody>

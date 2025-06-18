@@ -514,7 +514,9 @@ def registrar_abono(request):
     if request.method == "POST":
         form = AbonoForm(request.POST)
         if form.is_valid():
-            form.save()
+            abono = form.save(commit=False)
+            abono.usuario = request.user
+            abono.save()
             # Redirige al listado de saldos pendientes según rol
             if request.user.is_superuser:
                 return redirect("saldo_pendiente_admin")
@@ -530,25 +532,36 @@ def registrar_abono(request):
     )
 
 
+# core/views.py
 @login_required
 @user_passes_test(es_admin, login_url="login")
 def saldo_pendiente_admin(request):
     query = request.GET.get("q", "").strip()
 
-    ventas = (
+    # 1. Trae todas las ventas a crédito y aplica filtro de búsqueda
+    qs = (
         Venta.objects.filter(tipo_pago="credito")
         .select_related("cliente", "usuario")
         .order_by("-fecha")
     )
-
     if query:
-        ventas = ventas.filter(
+        qs = qs.filter(
             Q(cliente__nombre__icontains=query) | Q(numero_factura__icontains=query)
         )
 
-    # Filtrar ventas con saldo pendiente
-    ventas = [v for v in ventas if v.calcular_saldo_pendiente() > 0]
+    # 2. Construye la lista final con saldo > 0 y datos extra
+    ventas = []
+    for v in qs:
+        saldo = v.calcular_saldo_pendiente()
+        if saldo > 0:
+            # inyecta atributo dinámico saldo
+            v.saldo = saldo
+            # busca el último abono relacionado
+            ultimo = v.abonos.order_by("-fecha").first()
+            v.ultimo_abono_por = ultimo.usuario.username if ultimo else None
+            ventas.append(v)
 
+    # 3. Renderiza pasándole la lista enriquecida
     return render(
         request,
         "core/admin/pagos/saldo_pendiente.html",
@@ -560,22 +573,27 @@ def saldo_pendiente_admin(request):
 @user_passes_test(es_vendedor, login_url="login")
 def saldo_pendiente(request):
     query = request.GET.get("q", "").strip()
-
-    ventas = Venta.objects.filter(
-        usuario=request.user, tipo_pago="credito"
-    ).select_related("cliente")
-
-    if query:
-        ventas = ventas.filter(
-            Q(cliente__nombre__icontains=query) | Q(numero_factura__icontains=query)
-        )
-
-    ventas = [v for v in ventas if v.calcular_saldo_pendiente() > 0]
+    todas = (
+        Venta.objects.filter(usuario=request.user, tipo_pago="credito")
+        .select_related("cliente")
+        .order_by("-fecha")
+    )
+    ventas = []
+    for v in todas:
+        saldo = v.calcular_saldo_pendiente()
+        if saldo > 0:
+            ultimo = v.abonos.order_by("-fecha").first()
+            v.saldo = saldo
+            v.ultimo_abono_por = ultimo.usuario.username if ultimo else None
+            ventas.append(v)
 
     return render(
         request,
         "core/vendedor/pagos/saldo_pendiente.html",
-        {"ventas": ventas, "query": query},
+        {
+            "ventas": ventas,
+            "query": query,
+        },
     )
 
 
