@@ -198,24 +198,30 @@ def admin_cliente_list(request):
     )
 
 
+# core/views.py
+@login_required
 def cliente_create(request):
+    # Inicializamos el formulario con POST o en blanco
+    form = ClienteForm(request.POST or None)
+
     if request.method == "POST":
-        form = ClienteForm(request.POST)
         if form.is_valid():
             cliente = form.save(commit=False)
             cliente.creado_por = request.user
             cliente.save()
+            # Redirige según rol
             if request.user.is_superuser:
                 return redirect("admin_cliente_list")
             return redirect("vendedor_cliente_list")
+        # Si POST pero inválido, caerá al render de abajo mostrando errores
 
-        template = (
-            "core/admin/clientes/create.html"
-            if request.user.is_superuser
-            else "core/vendedor/clientes/create.html"
-        )
-
-        return render(request, template, {"form": form})
+    # Para GET o POST inválido, renderizamos el formulario
+    template = (
+        "core/admin/clientes/create.html"
+        if request.user.is_superuser
+        else "core/vendedor/clientes/create.html"
+    )
+    return render(request, template, {"form": form})
 
 
 def cliente_historial(request, pk):
