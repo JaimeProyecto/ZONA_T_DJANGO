@@ -385,7 +385,7 @@ def crear_venta(request):
 
 
 @login_required
-@user_passes_test(es_vendedor, login_url="login")
+@user_passes_test(es_admin, login_url="login")
 def venta_admin_detail(request, venta_id):
     venta = get_object_or_404(Venta, id=venta_id)
     return render(request, "core/admin/ventas/detail.html", {"venta": venta})
