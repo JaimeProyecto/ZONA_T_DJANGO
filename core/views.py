@@ -205,7 +205,9 @@ def cliente_create(request):
             cliente = form.save(commit=False)
             cliente.creado_por = request.user
             cliente.save()
-            return redirect("cliente_list")
+            if request.user.is_superuser:
+                return redirect("admin_cliente_list")
+            return redirect("vendedor_cliente_list")
     else:
         form = ClienteForm()
     return render(request, "core/admin/clientes/create.html", {"form": form})
@@ -229,7 +231,9 @@ def cliente_edit(request, cliente_id):
         form = ClienteForm(request.POST, instance=cliente)
         if form.is_valid():
             form.save()
-            return redirect("cliente_list")
+            if request.user.is_superuser:
+                return redirect("admin_cliente_list")
+            return redirect("vendedor_cliente_list")
     else:
         form = ClienteForm(instance=cliente)
 
@@ -243,7 +247,9 @@ def cliente_delete(request, pk):
     cliente = get_object_or_404(Cliente, pk=pk)
     if request.method == "POST":
         cliente.delete()
-        return redirect("cliente_list")
+        if request.user.is_superuser:
+            return redirect("admin_cliente_list")
+        return redirect("vendedor_cliente_list")
     return render(request, "core/admin/clientes/delete.html", {"cliente": cliente})
 
 
