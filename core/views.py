@@ -694,7 +694,7 @@ def exportar_ventas_excel(request, fecha):
     for venta in ventas:
         ws.append(
             [
-                venta.cliente.nombre_completo,
+                venta.cliente.nombre,
                 venta.fecha.strftime("%Y-%m-%d"),
                 float(venta.total),
             ]

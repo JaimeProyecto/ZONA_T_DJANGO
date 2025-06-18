@@ -1,3 +1,4 @@
+{# core/templates/core/admin/ventas/detail.html #}
 {% extends "core/base_dashboard.html" %}
 {% block title %}Detalle de Venta – ZONA T{% endblock %}
 {% block header %}Detalle de Venta{% endblock %}
@@ -8,7 +9,15 @@
     <h2 class="text-2xl font-bold text-green-400">📄 Factura #{{ venta.numero_factura }}</h2>
 
     {% if venta.estado == 'activa' %}
-
+      <form action="{% url 'venta_delete' venta.id %}" method="post">
+        {% csrf_token %}
+        <button 
+          type="submit" 
+          class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded"
+        >
+          🛑 Anular factura
+        </button>
+      </form>
     {% else %}
       <span class="text-red-400 font-semibold">🛑 Venta Anulada</span>
     {% endif %}
