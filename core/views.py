@@ -327,7 +327,15 @@ def crear_venta(request):
 
             with transaction.atomic():
                 # Generar número de factura único
-                prefijo = "FV1-" if tipo_pago == "credito" else "FE1-"
+                if tipo_pago == "credito":
+                    prefijo = "FC-"
+                elif tipo_pago == "transferencia":
+                    prefijo = "FT-"
+                elif tipo_pago == "garantia":
+                    prefijo = "FG-"
+                else:
+                    prefijo = "FV-"
+
                 ultimas = Venta.objects.filter(tipo_pago=tipo_pago).count() + 1
                 numero_factura = f"{prefijo}{ultimas}"
 
