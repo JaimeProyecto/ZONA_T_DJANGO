@@ -298,35 +298,29 @@ def buscar_productos(request):
 # ventas
 
 
+# core/views.py
 @login_required
 @user_passes_test(es_vendedor, login_url="login")
 def crear_venta(request):
     clientes = Cliente.objects.all()
-    productos = Product.objects.all()
+    # solo referencia/descr para autocompletar
+    productos = Product.objects.all().values("id", "reference", "description")
 
     if request.method == "POST":
+        data = request.POST
+        cliente_id = data.get("cliente")
+        tipo_pago = data.get("tipo_pago", "contado")
+        productos_json = json.loads(data.get("productos_data", "[]"))
+
+        if not cliente_id or not productos_json:
+            messages.error(
+                request, "Debes seleccionar un cliente y al menos un producto."
+            )
+            return redirect("venta_create")
+
         try:
-            data = request.POST
-            cliente_id = data.get("cliente")
-            tipo_pago = data.get("tipo_pago", "contado")
-            productos_json = json.loads(data.get("productos_data", "[]"))
-
-            if not cliente_id or not productos_json:
-                messages.error(
-                    request, "Debes seleccionar un cliente y al menos un producto."
-                )
-
-                print("🚨 POST completado, usuario actual:", request.user)
-                print("¿Autenticado?", request.user.is_authenticated)
-                print(
-                    "¿Está en grupo 'vendedor'?",
-                    request.user.groups.filter(name="vendedor").exists(),
-                )
-
-                return redirect("venta_create")
-
             with transaction.atomic():
-                # Generar número de factura único
+                # --- Prefijo según tipo de pago ---
                 if tipo_pago == "credito":
                     prefijo = "FC-"
                 elif tipo_pago == "transferencia":
@@ -336,9 +330,10 @@ def crear_venta(request):
                 else:
                     prefijo = "FV-"
 
-                ultimas = Venta.objects.filter(tipo_pago=tipo_pago).count() + 1
-                numero_factura = f"{prefijo}{ultimas}"
+                contador = Venta.objects.filter(tipo_pago=tipo_pago).count() + 1
+                numero_factura = f"{prefijo}{contador}"
 
+                # Crear instancia Venta
                 venta = Venta.objects.create(
                     cliente_id=cliente_id,
                     numero_factura=numero_factura,
@@ -346,32 +341,33 @@ def crear_venta(request):
                     usuario=request.user,
                 )
 
-                total = Decimal("0.00")
+                total = Decimal("0")
+                # Recorrer productos enviados
                 for item in productos_json:
-                    producto = Product.objects.get(pk=item["producto_id"])
+                    prod = Product.objects.get(pk=item["producto_id"])
                     cantidad = int(item["cantidad"])
+                    precio_unitario = Decimal(str(item["precio_unitario"]))
 
-                    if producto.stock < cantidad:
-                        messages.error(
-                            request,
-                            f"Stock insuficiente para el producto {producto.reference}.",
-                        )
-                        return redirect("venta_create")
+                    # Validar stock
+                    if prod.stock < cantidad:
+                        raise ValueError(f"Stock insuficiente para {prod.reference}")
 
-                    subtotal = producto.sale_price * cantidad
-
+                    # Calcular subtotal y guardar VentaItem
+                    subtotal = precio_unitario * cantidad
                     VentaItem.objects.create(
                         venta=venta,
-                        producto=producto,
+                        producto=prod,
                         cantidad=cantidad,
-                        precio=Decimal(str(producto.sale_price)),
+                        precio=precio_unitario,
                     )
 
                     # Actualizar stock
-                    producto.stock -= cantidad
-                    producto.save()
+                    prod.stock -= cantidad
+                    prod.save()
+
                     total += subtotal
 
+                # Guardar total en la venta
                 venta.total = total
                 venta.save()
 
@@ -379,26 +375,19 @@ def crear_venta(request):
                     request,
                     f"✅ Venta #{venta.numero_factura} registrada correctamente.",
                 )
-
-                if request.user.groups.filter(name="admin").exists():
-                    return redirect("venta_admin_list")
-                else:
-                    return redirect("venta_vendedor_list")
+                return redirect("venta_vendedor_list")
 
         except Exception as e:
             messages.error(request, f"❌ Error al registrar la venta: {e}")
             return redirect("venta_create")
 
-    productos_data = list(
-        productos.values("id", "reference", "description", "sale_price")
-    )
-
+    # GET: renderizar formulario
     return render(
         request,
         "core/vendedor/ventas/create.html",
         {
             "clientes": clientes,
-            "productos": productos_data,
+            "productos": list(productos),
         },
     )
 
