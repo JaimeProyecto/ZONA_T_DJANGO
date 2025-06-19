@@ -42,6 +42,13 @@ class Product(models.Model):
 
 
 class Venta(models.Model):
+    TIPO_PAGO_CHOICES = [
+        ("contado", "Contado"),
+        ("credito", "Crédito"),
+        ("transferencia", "Transferencia"),
+        ("garantia", "Garantía"),
+    ]
+
     cliente = models.ForeignKey("Cliente", on_delete=models.CASCADE)
     fecha = models.DateTimeField(auto_now_add=True)
     numero_factura = models.CharField(max_length=20, unique=True, blank=True, null=True)
@@ -52,8 +59,8 @@ class Venta(models.Model):
         default="activa",
     )
     tipo_pago = models.CharField(
-        max_length=10,
-        choices=[("contado", "Contado"), ("credito", "Crédito")],
+        max_length=15,
+        choices=TIPO_PAGO_CHOICES,
         default="contado",
     )
     usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
@@ -68,14 +75,24 @@ class Venta(models.Model):
         return self.total - self.calcular_abonos()
 
     def save(self, *args, **kwargs):
+        # Asigna número de factura solo la primera vez
         if not self.numero_factura:
-            prefijo = "FV1-" if self.tipo_pago == "credito" else "FE1-"
-            ultimas = Venta.objects.filter(tipo_pago=self.tipo_pago).count() + 1
-            self.numero_factura = f"{prefijo}{ultimas}"
+            # Determina prefijo según tipo de pago
+            if self.tipo_pago == "credito":
+                prefijo = "FC-"
+            elif self.tipo_pago == "transferencia":
+                prefijo = "FT-"
+            elif self.tipo_pago == "garantia":
+                prefijo = "FG-"
+            else:
+                prefijo = "FV-"
+            # Cuenta ventas previas del mismo tipo y genera el secuencial
+            contador = Venta.objects.filter(tipo_pago=self.tipo_pago).count() + 1
+            self.numero_factura = f"{prefijo}{contador}"
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.numero_factura} - {self.cliente.nombre}"
+        return f"{self.numero_factura} – {self.cliente.nombre}"
 
 
 # models.py
