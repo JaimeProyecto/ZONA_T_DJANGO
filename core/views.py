@@ -409,6 +409,7 @@ def venta_vendedor_detail(request, venta_id):
     return render(request, "core/vendedor/ventas/detail.html", {"venta": venta})
 
 
+# core/views.py
 @login_required
 @user_passes_test(es_admin, login_url="login")
 def venta_admin_list(request):
@@ -416,27 +417,56 @@ def venta_admin_list(request):
     fecha_inicio = request.GET.get("fecha_inicio", "").strip()
     fecha_fin = request.GET.get("fecha_fin", "").strip()
 
-    ventas = Venta.objects.all().select_related("cliente", "usuario")
-
+    # Base queryset con prefetch de items y producto
+    qs = (
+        Venta.objects.select_related("cliente", "usuario")
+        .prefetch_related("items__producto")
+        .order_by("-fecha")
+    )
     if query:
-        ventas = ventas.filter(
+        qs = qs.filter(
             Q(cliente__nombre__icontains=query) | Q(numero_factura__icontains=query)
         )
-
     if fecha_inicio:
-        ventas = ventas.filter(fecha__date__gte=fecha_inicio)
+        qs = qs.filter(fecha__date__gte=fecha_inicio)
     if fecha_fin:
-        ventas = ventas.filter(fecha__date__lte=fecha_fin)
+        qs = qs.filter(fecha__date__lte=fecha_fin)
 
-    ventas = ventas.order_by("-fecha")
+    ventas = []
+    for v in qs:
+        # Calcula ganancia sumando (precio de venta – precio de compra) × cantidad
+        ganancia = 0
+        for item in v.items.all():
+            cost = item.producto.purchase_price
+            sale = item.precio
+            ganancia += (sale - cost) * item.cantidad
+        v.ganancia = ganancia
+        ventas.append(v)
 
-    context = {
-        "ventas": ventas,
-        "query": query,
-        "fecha_inicio": fecha_inicio,
-        "fecha_fin": fecha_fin,
-    }
-    return render(request, "core/admin/ventas/list.html", context)
+    # Totales para pie de tabla
+    total_ventas = sum(v.total for v in ventas)
+    total_ganancias = sum(v.ganancia for v in ventas)
+
+    return render(
+        request,
+        "core/admin/ventas/list.html",
+        {
+            "ventas": ventas,
+            "query": query,
+            "fecha_inicio": fecha_inicio,
+            "fecha_fin": fecha_fin,
+            "total_ventas": total_ventas,
+            "total_ganancias": total_ganancias,
+        },
+    )
+
+
+# core/views.py
+from django.shortcuts import render
+from django.contrib.auth.decorators import login_required, user_passes_test
+from django.db.models import Q
+from .models import Venta
+from .views import es_vendedor
 
 
 @login_required
@@ -446,20 +476,21 @@ def venta_vendedor_list(request):
     fecha_inicio = request.GET.get("fecha_inicio", "").strip()
     fecha_fin = request.GET.get("fecha_fin", "").strip()
 
-    ventas = Venta.objects.filter(usuario=request.user).select_related("cliente")
-
+    qs = (
+        Venta.objects.filter(usuario=request.user)
+        .select_related("cliente")
+        .order_by("-fecha")
+    )
     if query:
-        ventas = ventas.filter(
+        qs = qs.filter(
             Q(cliente__nombre__icontains=query) | Q(numero_factura__icontains=query)
         )
-
     if fecha_inicio:
-        ventas = ventas.filter(fecha__date__gte=fecha_inicio)
+        qs = qs.filter(fecha__date__gte=fecha_inicio)
     if fecha_fin:
-        ventas = ventas.filter(fecha__date__lte=fecha_fin)
+        qs = qs.filter(fecha__date__lte=fecha_fin)
 
-    ventas = ventas.order_by("-fecha")
-
+    ventas = list(qs)  # no calculamos ganancias
     return render(
         request,
         "core/vendedor/ventas/list.html",
@@ -548,7 +579,6 @@ def registrar_abono(request):
 def saldo_pendiente_admin(request):
     query = request.GET.get("q", "").strip()
 
-    # 1. Trae todas las ventas a crédito y aplica filtro de búsqueda
     qs = (
         Venta.objects.filter(tipo_pago="credito")
         .select_related("cliente", "usuario")
@@ -559,22 +589,16 @@ def saldo_pendiente_admin(request):
             Q(cliente__nombre__icontains=query) | Q(numero_factura__icontains=query)
         )
 
-    # 2. Construye la lista final con saldo > 0 y datos extra
     ventas = []
     for v in qs:
         saldo = v.calcular_saldo_pendiente()
         if saldo > 0:
-            # inyecta atributo dinámico saldo
-            v.saldo = saldo
-            # busca el último abono relacionado
+            v.total_compra = v.total
+            v.saldo_pendiente = saldo
             ultimo = v.abonos.order_by("-fecha").first()
-            if ultimo and ultimo.usuario:
-                v.ultimo_abono_por = ultimo.usuario.username
-            else:
-                v.ultimo_abono_por = None
+            v.ultimo_abono_monto = ultimo.monto if ultimo else None
             ventas.append(v)
 
-    # 3. Renderiza pasándole la lista enriquecida
     return render(
         request,
         "core/admin/pagos/saldo_pendiente.html",
@@ -582,6 +606,7 @@ def saldo_pendiente_admin(request):
     )
 
 
+# core/views.py
 @login_required
 @user_passes_test(es_vendedor, login_url="login")
 def saldo_pendiente(request):
@@ -601,22 +626,16 @@ def saldo_pendiente(request):
     for v in qs:
         saldo = v.calcular_saldo_pendiente()
         if saldo > 0:
-            v.saldo = saldo
-            # Último abono
+            v.total_compra = v.total
+            v.saldo_pendiente = saldo
             ultimo = v.abonos.order_by("-fecha").first()
-            v.ultimo_abono_por = (
-                ultimo.usuario.username if (ultimo and ultimo.usuario) else None
-            )
             v.ultimo_abono_monto = ultimo.monto if ultimo else None
             ventas.append(v)
 
     return render(
         request,
         "core/vendedor/pagos/saldo_pendiente.html",
-        {
-            "ventas": ventas,
-            "query": query,
-        },
+        {"ventas": ventas, "query": query},
     )
 
 

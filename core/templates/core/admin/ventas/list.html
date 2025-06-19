@@ -1,72 +1,82 @@
-{% extends 'core/base_dashboard.html' %}
-{% block title %}Ventas - Administrador{% endblock %}
+{% extends "core/base_dashboard.html" %}
+{% block title %}Ventas Registradas{% endblock %}
+
 {% block content %}
+<div class="flex justify-between items-center mb-6">
+  <h2 class="text-2xl font-bold text-green-400">📦 Ventas Registradas</h2>
+  <a href="{% url 'venta_create' %}"
+     class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold">
+    ➕ Registrar Venta
+  </a>
+</div>
 
-<div class="max-w-7xl mx-auto mt-8">
-  <div class="flex justify-between items-center mb-6">
-    <h2 class="text-2xl font-bold text-green-400">📦 Ventas Registradas</h2>
-    <a href="{% url 'exportar_ventas_excel_admin' %}" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold px-4 py-2 rounded">
-      📥 Exportar Excel
-    </a>
-  </div>
-
-  <!-- 🔍 Buscador -->
-<form method="get" class="mb-4 flex flex-wrap items-center gap-3">
-  <input type="text" name="q" placeholder="Buscar por cliente o factura..."
-         value="{{ query|default_if_none:'' }}"
-         class="px-3 py-2 rounded bg-gray-900 text-white border border-green-500">
-
-  <input type="date" name="fecha_inicio" value="{{ fecha_inicio }}" class="px-3 py-2 rounded bg-gray-900 text-white border border-green-500">
-  <input type="date" name="fecha_fin" value="{{ fecha_fin }}" class="px-3 py-2 rounded bg-gray-900 text-white border border-green-500">
-
-  <button type="submit" class="bg-green-600 hover:bg-green-700 text-black font-bold px-4 py-2 rounded">
+<form method="get" class="flex space-x-2 mb-4">
+  <input type="text" name="q" placeholder="Buscar cliente o factura..."
+         value="{{ query }}"
+         class="px-3 py-2 rounded bg-gray-700 text-white flex-1"/>
+  <input type="date" name="fecha_inicio" value="{{ fecha_inicio }}"
+         class="px-3 py-2 rounded bg-gray-700 text-white"/>
+  <input type="date" name="fecha_fin"    value="{{ fecha_fin }}"
+         class="px-3 py-2 rounded bg-gray-700 text-white"/>
+  <button type="submit"
+          class="bg-green-500 hover:bg-green-600 px-4 py-2 rounded font-bold text-black">
     🔍 Buscar
   </button>
 </form>
 
-  <!-- 🧾 Tabla -->
-  <div class="overflow-x-auto">
-    <table class="w-full text-sm bg-zinc-900 border border-zinc-700 rounded">
-      <thead class="bg-zinc-800 text-green-300 text-left">
-        <tr>
-          <th class="p-3"># Factura</th>
-          <th class="p-3">Cliente</th>
-          <th class="p-3">Tipo de Pago</th>
-          <th class="p-3">Total</th>
-          <th class="p-3">Fecha</th>
-          <th class="p-3">Estado</th>
-          <th class="p-3">Usuario</th>
-          <th class="p-3">Detalles</th>
-        </tr>
-      </thead>
-      <tbody class="text-white">
-        {% for venta in ventas %}
-        <tr class="border-t border-zinc-700 hover:bg-zinc-800">
-          <td class="p-3 font-mono text-blue-400">{{ venta.numero_factura }}</td>
-          <td class="p-3">{{ venta.cliente.nombre }}</td>
-          <td class="p-3 capitalize">{{ venta.tipo_pago }}</td>
-          <td class="p-3 text-green-300 font-semibold">${{ venta.total }}</td>
-          <td class="p-3">{{ venta.fecha|date:"Y-m-d H:i" }}</td>
-          <td class="p-3">
-            {% if venta.estado == 'activa' %}
-              <span class="text-green-400 font-semibold">Activa</span>
-            {% else %}
-              <span class="text-red-400 font-semibold">Anulada</span>
-            {% endif %}
-          </td>
-          <td class="p-3 text-zinc-300">{{ venta.usuario.username }}</td>
-          <td class="p-3">
-            <a href="{% url 'venta_admin_detail' venta.id %}" class="text-blue-400 hover:text-blue-300 font-semibold underline">
-              Ver
-            </a>
-          </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="8" class="p-3 text-center text-zinc-400">No hay ventas registradas.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+<table class="w-full bg-gray-900 rounded overflow-hidden text-white text-sm">
+  <thead class="bg-gray-800">
+    <tr>
+      <th class="px-4 py-2"># Factura</th>
+      <th class="px-4 py-2">Cliente</th>
+      <th class="px-4 py-2">Tipo de Pago</th>
+      <th class="px-4 py-2 text-right">Total Venta</th>
+      <th class="px-4 py-2 text-right">Total Ganancias</th>
+      <th class="px-4 py-2">Fecha</th>
+      <th class="px-4 py-2">Usuario</th>
+      <th class="px-4 py-2">Estado</th>
+      <th class="px-4 py-2">Detalles</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for venta in ventas %}
+    <tr class="border-t border-gray-700 hover:bg-gray-800">
+      <td class="px-4 py-2 font-mono text-blue-400">
+        <a href="{% url 'venta_admin_detail' venta.id %}">#{{ venta.numero_factura }}</a>
+      </td>
+      <td class="px-4 py-2">{{ venta.cliente.nombre }}</td>
+      <td class="px-4 py-2">{{ venta.tipo_pago|capfirst }}</td>
+      <td class="px-4 py-2 text-right">${{ venta.total|floatformat:2 }}</td>
+      <td class="px-4 py-2 text-right text-yellow-400">${{ venta.ganancia|floatformat:2 }}</td>
+      <td class="px-4 py-2">{{ venta.fecha|date:"Y-m-d H:i" }}</td>
+      <td class="px-4 py-2">{{ venta.usuario.username }}</td>
+      <td class="px-4 py-2">
+        {% if venta.estado == "activa" %}
+          <span class="text-green-400">Activa</span>
+        {% else %}
+          <span class="text-red-400">Anulada</span>
+        {% endif %}
+      </td>
+      <td class="px-4 py-2"><a href="{% url 'venta_admin_detail' venta.id %}">Ver</a></td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="9" class="px-4 py-4 text-center text-gray-400">
+        No hay ventas registradas.
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="flex justify-end space-x-12 mt-4 text-white">
+  <div class="text-right">
+    <p class="font-semibold">🧾 Total Ventas:</p>
+    <p class="text-green-300 font-bold text-lg">${{ total_ventas|floatformat:2 }}</p>
+  </div>
+  <div class="text-right">
+    <p class="font-semibold">💰 Total Ganancias:</p>
+    <p class="text-yellow-300 font-bold text-lg">${{ total_ganancias|floatformat:2 }}</p>
   </div>
 </div>
-
 {% endblock %}
