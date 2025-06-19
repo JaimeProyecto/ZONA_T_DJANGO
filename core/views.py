@@ -417,10 +417,9 @@ def venta_admin_list(request):
     fecha_inicio = request.GET.get("fecha_inicio", "").strip()
     fecha_fin = request.GET.get("fecha_fin", "").strip()
 
-    # Base queryset con prefetch de items y producto
     qs = (
         Venta.objects.select_related("cliente", "usuario")
-        .prefetch_related("items__producto")
+        .prefetch_related("items__producto", "abonos__usuario")
         .order_by("-fecha")
     )
     if query:
@@ -434,16 +433,20 @@ def venta_admin_list(request):
 
     ventas = []
     for v in qs:
-        # Calcula ganancia sumando (precio de venta – precio de compra) × cantidad
-        ganancia = 0
-        for item in v.items.all():
-            cost = item.producto.purchase_price
-            sale = item.precio
-            ganancia += (sale - cost) * item.cantidad
+        # ganancia
+        ganancia = sum(
+            (item.precio - item.producto.purchase_price) * item.cantidad
+            for item in v.items.all()
+        )
+        # último abono
+        ultimo = v.abonos.order_by("-fecha").first()
+        v.ultimo_abono_por = (
+            ultimo.usuario.username if (ultimo and ultimo.usuario) else None
+        )
+        v.ultimo_abono_monto = ultimo.monto if ultimo else None
         v.ganancia = ganancia
         ventas.append(v)
 
-    # Totales para pie de tabla
     total_ventas = sum(v.total for v in ventas)
     total_ganancias = sum(v.ganancia for v in ventas)
 
@@ -462,13 +465,6 @@ def venta_admin_list(request):
 
 
 # core/views.py
-from django.shortcuts import render
-from django.contrib.auth.decorators import login_required, user_passes_test
-from django.db.models import Q
-from .models import Venta
-from .views import es_vendedor
-
-
 @login_required
 @user_passes_test(es_vendedor, login_url="login")
 def venta_vendedor_list(request):
@@ -479,6 +475,7 @@ def venta_vendedor_list(request):
     qs = (
         Venta.objects.filter(usuario=request.user)
         .select_related("cliente")
+        .prefetch_related("abonos__usuario")
         .order_by("-fecha")
     )
     if query:
@@ -490,7 +487,18 @@ def venta_vendedor_list(request):
     if fecha_fin:
         qs = qs.filter(fecha__date__lte=fecha_fin)
 
-    ventas = list(qs)  # no calculamos ganancias
+    ventas = []
+    for v in qs:
+        # último abono
+        ultimo = v.abonos.order_by("-fecha").first()
+        v.ultimo_abono_por = (
+            ultimo.usuario.username if (ultimo and ultimo.usuario) else None
+        )
+        v.ultimo_abono_monto = ultimo.monto if ultimo else None
+        ventas.append(v)
+
+    total_ventas = sum(v.total for v in ventas)
+
     return render(
         request,
         "core/vendedor/ventas/list.html",
@@ -499,6 +507,7 @@ def venta_vendedor_list(request):
             "query": query,
             "fecha_inicio": fecha_inicio,
             "fecha_fin": fecha_fin,
+            "total_ventas": total_ventas,
         },
     )
 

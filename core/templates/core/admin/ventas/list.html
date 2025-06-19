@@ -32,6 +32,8 @@
       <th class="px-4 py-2">Tipo de Pago</th>
       <th class="px-4 py-2 text-right">Total Venta</th>
       <th class="px-4 py-2 text-right">Total Ganancias</th>
+      <th class="px-4 py-2">Último Abono Por</th>
+      <th class="px-4 py-2 text-right">Monto Último Abono</th>
       <th class="px-4 py-2">Fecha</th>
       <th class="px-4 py-2">Usuario</th>
       <th class="px-4 py-2">Estado</th>
@@ -48,20 +50,26 @@
       <td class="px-4 py-2">{{ venta.tipo_pago|capfirst }}</td>
       <td class="px-4 py-2 text-right">${{ venta.total|floatformat:2 }}</td>
       <td class="px-4 py-2 text-right text-yellow-400">${{ venta.ganancia|floatformat:2 }}</td>
+      <td class="px-4 py-2">{{ venta.ultimo_abono_por|default:"—" }}</td>
+      <td class="px-4 py-2 text-right">
+        {% if venta.ultimo_abono_monto %}
+          ${{ venta.ultimo_abono_monto|floatformat:2 }}
+        {% else %}
+          —
+        {% endif %}
+      </td>
       <td class="px-4 py-2">{{ venta.fecha|date:"Y-m-d H:i" }}</td>
       <td class="px-4 py-2">{{ venta.usuario.username }}</td>
       <td class="px-4 py-2">
-        {% if venta.estado == "activa" %}
-          <span class="text-green-400">Activa</span>
-        {% else %}
-          <span class="text-red-400">Anulada</span>
-        {% endif %}
+        <span class="{{ venta.estado == 'activa' and 'text-green-400' or 'text-red-400' }}">
+          {{ venta.estado|capfirst }}
+        </span>
       </td>
       <td class="px-4 py-2"><a href="{% url 'venta_admin_detail' venta.id %}">Ver</a></td>
     </tr>
     {% empty %}
     <tr>
-      <td colspan="9" class="px-4 py-4 text-center text-gray-400">
+      <td colspan="11" class="px-4 py-4 text-center text-gray-400">
         No hay ventas registradas.
       </td>
     </tr>
