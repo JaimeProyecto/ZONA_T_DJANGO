@@ -40,8 +40,8 @@
     <td class="py-2 px-4 border-b border-zinc-700">{{ forloop.counter }}</td>
     <td class="py-2 px-4 border-b border-zinc-700">{{ product.reference }}</td>
     <td class="py-2 px-4 border-b border-zinc-700">{{ product.description }}</td>
-    <td class="py-2 px-4 border-b border-zinc-700">${{ product.purchase_price }}</td>
-    <td class="py-2 px-4 border-b border-zinc-700">${{ product.sale_price }}</td>
+    <td class="py-2 px-4 border-b border-zinc-700">${{ product.purchase_price|formato_miles }}</td>
+    <td class="py-2 px-4 border-b border-zinc-700">${{ product.sale_price|formato_miles }}</td>
     <td class="py-2 px-4 border-b border-zinc-700">{{ product.stock }}</td>
     
   </tr>

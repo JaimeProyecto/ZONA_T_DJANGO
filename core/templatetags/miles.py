@@ -1,18 +1,19 @@
+# core/templatetags/miles.py
 from django import template
 
 register = template.Library()
 
 
 @register.filter
-def en_miles(value):
+def formato_miles(value):
     """
-    Divide el valor numérico entre 1000 y le da formato con separador de miles,
-    sin decimales.
-    Ej: 1530000 -> "1 530"
+    Formatea un número entero o decimal con separador de miles (puntos),
+    sin decimales. Ej: 17000 → "17.000"
     """
     try:
-        n = float(value) / 1000
-        # formatea sin decimales, con separador de miles
-        return "{:,.0f}".format(n).replace(",", ".")
+        # convierte a float y redondea cero decimales
+        texto = "{:,.0f}".format(float(value))
+        # sustituye comas por puntos
+        return texto.replace(",", ".")
     except Exception:
         return value

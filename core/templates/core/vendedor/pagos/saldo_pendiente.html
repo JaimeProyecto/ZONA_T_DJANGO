@@ -31,11 +31,11 @@
       <tr class="border-t border-gray-700 hover:bg-gray-800">
         <td class="px-4 py-2 font-mono text-blue-400">{{ venta.numero_factura }}</td>
         <td class="px-4 py-2">{{ venta.cliente.nombre }}</td>
-        <td class="px-4 py-2 text-right">${{ venta.total_compra|en_miles }}K</td>
-        <td class="px-4 py-2 text-right text-yellow-400">${{ venta.saldo_pendiente|en_miles }}K</td>
+        <td class="px-4 py-2 text-right">${{ venta.total_compra|formato_miles }}</td>
+        <td class="px-4 py-2 text-right text-yellow-400">${{ venta.saldo_pendiente|formato_miles }}</td>
         <td class="px-4 py-2 text-right">
           {% if venta.ultimo_abono_monto %}
-            ${{ venta.ultimo_abono_monto|en_miles }}K</td>}}
+            ${{ venta.ultimo_abono_monto|formato_miles }}</td>}}
           {% else %}
             —
           {% endif %}
@@ -60,7 +60,7 @@
   <div class="flex justify-end mt-4 text-white space-x-4">
     <p class="font-semibold">💰 Total Deuda:</p>
     <p class="text-yellow-300 font-bold text-lg">
-      ${{ total_deuda|en_miles }}K</td>}}
+      ${{ total_deuda|formato_miles }}</td>}}
     </p>
   </div>
 </div>

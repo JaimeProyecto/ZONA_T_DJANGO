@@ -44,7 +44,7 @@
       </td>
       <td class="px-4 py-2">{{ venta.cliente.nombre }}</td>
       <td class="px-4 py-2">{{ venta.tipo_pago|capfirst }}</td>
-      <td class="px-4 py-2 text-right">${{ venta.total|en_miles }}K</td>
+      <td class="px-4 py-2 text-right">${{ venta.total|formato_miles }}</td>
       <td class="px-4 py-2">{{ venta.fecha|date:"Y-m-d H:i" }}</td>
       <td class="px-4 py-2">
         <span class="{% if venta.estado == 'activa' %}text-green-400{% else %}text-red-400{% endif %}">
@@ -66,7 +66,7 @@
 <div class="flex justify-end mt-4 text-white">
   <div class="text-right">
     <p class="font-semibold">🧾 Total Ventas:</p>
-    <p class="text-green-300 font-bold text-lg">${{ total_ventas|en_miles }}K</td>}}</p>
+    <p class="text-green-300 font-bold text-lg">${{ total_ventas|formato_miles }}</p>
   </div>
 </div>
 {% endblock %}
