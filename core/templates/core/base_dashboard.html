@@ -13,7 +13,14 @@
     <!-- Sidebar -->
     <aside class="w-64 bg-zinc-800 p-6 flex flex-col">
       <img src="{% static 'core/img/logo.png' %}" class="w-20 mx-auto mb-4" alt="Logo">
-      <h1 class="text-2xl font-bold text-green-400 text-center mb-8">ZONA T</h1>
+      <h1 class="text-2xl font-bold text-green-400 text-center mb-2">ZONA T</h1>
+      <p class="text-center text-sm text-zinc-300 mb-8">
+        {% if user.is_superuser %}
+          Administrador
+        {% else %}
+          Vendedor
+        {% endif %}
+      </p>
 
       <nav class="flex-1 space-y-2">
         <a href="{% url 'admin_dashboard' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Inicio</a>

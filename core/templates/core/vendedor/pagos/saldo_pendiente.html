@@ -23,6 +23,7 @@
         <th class="px-4 py-2 text-right">Total Compra</th>
         <th class="px-4 py-2 text-right">Saldo Pendiente</th>
         <th class="px-4 py-2 text-right">Monto Último Abono</th>
+        <th class="px-4 py-2">Registrado Por</th>
         <th class="px-4 py-2 text-right">Acción</th>
       </tr>
     </thead>
@@ -35,10 +36,13 @@
         <td class="px-4 py-2 text-right text-yellow-400">${{ venta.saldo_pendiente|formato_miles }}</td>
         <td class="px-4 py-2 text-right">
           {% if venta.ultimo_abono_monto %}
-            ${{ venta.ultimo_abono_monto|formato_miles }}</td>
+            ${{ venta.ultimo_abono_monto|formato_miles }}
           {% else %}
             —
           {% endif %}
+        </td>
+        <td class="px-4 py-2">
+          {{ venta.ultimo_abono_por|default:"—" }}
         </td>
         <td class="px-4 py-2 text-right">
           <a href="{% url 'registrar_abono' %}?venta_id={{ venta.id }}"
@@ -49,9 +53,7 @@
       </tr>
       {% empty %}
       <tr>
-        <td colspan="6" class="py-4 text-center text-gray-400">
-          No hay ventas a crédito con saldo pendiente.
-        </td>
+        <td colspan="7" class="py-4 text-center text-gray-400">No hay ventas a crédito con saldo pendiente.</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -60,7 +62,7 @@
   <div class="flex justify-end mt-4 text-white space-x-4">
     <p class="font-semibold">💰 Total Deuda:</p>
     <p class="text-yellow-300 font-bold text-lg">
-      ${{ total_deuda|formato_miles }}</td>
+      ${{ total_deuda|formato_miles }}
     </p>
   </div>
 </div>
