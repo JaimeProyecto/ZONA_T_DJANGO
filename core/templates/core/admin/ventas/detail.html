@@ -54,8 +54,8 @@
         <tr class="border-b border-zinc-700 hover:bg-zinc-800 transition">
           <td class="px-4 py-2">{{ item.producto.description }}</td>
           <td class="px-4 py-2">{{ item.cantidad }}</td>
-          <td class="px-4 py-2">${{ item.precio|floatformat:0 }}</td>
-          <td class="px-4 py-2">${{ item.subtotal|floatformat:0 }}</td>
+          <td class="px-4 py-2">${{ item.precio|formato_miles }}</td>
+          <td class="px-4 py-2">${{ item.subtotal|formato_miles }}</td>
         </tr>
       {% empty %}
         <tr>
@@ -67,6 +67,6 @@
 
   <hr class="my-6 border-zinc-600">
 
-  <p class="text-right text-xl font-bold text-green-300">💰 Total: ${{ venta.total|floatformat:0 }}</p>
+  <p class="text-right text-xl font-bold text-green-300">💰 Total: ${{ venta.total|formato_miles }}</p>
 </div>
 {% endblock %}
