@@ -588,10 +588,21 @@ def saldo_pendiente_admin(request):
     for v in qs:
         saldo = v.calcular_saldo_pendiente()
         if saldo > 0:
+            # datos que ya tenías
             v.total_compra = v.total
             v.saldo_pendiente = saldo
+
+            # extraigo el último abono
             ultimo = v.abonos.order_by("-fecha").first()
-            v.ultimo_abono_monto = ultimo.monto if ultimo else None
+            if ultimo:
+                v.ultimo_abono_monto = ultimo.monto
+                v.ultimo_abono_por = ultimo.usuario.username if ultimo.usuario else None
+                v.ultimo_abono_fecha = ultimo.fecha
+            else:
+                v.ultimo_abono_monto = None
+                v.ultimo_abono_por = None
+                v.ultimo_abono_fecha = None
+
             ventas.append(v)
 
     total_deuda = sum(v.saldo_pendiente for v in ventas)
@@ -628,8 +639,17 @@ def saldo_pendiente(request):
         if saldo > 0:
             v.total_compra = v.total
             v.saldo_pendiente = saldo
+
             ultimo = v.abonos.order_by("-fecha").first()
-            v.ultimo_abono_monto = ultimo.monto if ultimo else None
+            if ultimo:
+                v.ultimo_abono_monto = ultimo.monto
+                v.ultimo_abono_por = ultimo.usuario.username if ultimo.usuario else None
+                v.ultimo_abono_fecha = ultimo.fecha
+            else:
+                v.ultimo_abono_monto = None
+                v.ultimo_abono_por = None
+                v.ultimo_abono_fecha = None
+
             ventas.append(v)
 
     total_deuda = sum(v.saldo_pendiente for v in ventas)

@@ -24,6 +24,7 @@
         <th class="px-4 py-2 text-right">Saldo Pendiente</th>
         <th class="px-4 py-2 text-right">Monto Último Abono</th>
         <th class="px-4 py-2">Registrado Por</th>
+        <th class="px-4 py-2">Fecha/Hora Abono</th>
         <th class="px-4 py-2 text-right">Acción</th>
       </tr>
     </thead>
@@ -41,8 +42,13 @@
             —
           {% endif %}
         </td>
+        <td class="px-4 py-2">{{ venta.ultimo_abono_por|default:"—" }}</td>
         <td class="px-4 py-2">
-          {{ venta.ultimo_abono_por|default:"—" }}
+          {% if venta.ultimo_abono_fecha %}
+            {{ venta.ultimo_abono_fecha|date:"d/m/Y H:i" }}
+          {% else %}
+            —
+          {% endif %}
         </td>
         <td class="px-4 py-2 text-right">
           <a href="{% url 'registrar_abono' %}?venta_id={{ venta.id }}"
@@ -53,7 +59,9 @@
       </tr>
       {% empty %}
       <tr>
-        <td colspan="7" class="py-4 text-center text-gray-400">No hay ventas a crédito con saldo pendiente.</td>
+        <td colspan="8" class="py-4 text-center text-gray-400">
+          No hay ventas a crédito con saldo pendiente.
+        </td>
       </tr>
       {% endfor %}
     </tbody>
