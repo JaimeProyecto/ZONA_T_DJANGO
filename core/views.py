@@ -594,14 +594,19 @@ def saldo_pendiente_admin(request):
             v.ultimo_abono_monto = ultimo.monto if ultimo else None
             ventas.append(v)
 
+    total_deuda = sum(v.saldo_pendiente for v in ventas)
+
     return render(
         request,
         "core/admin/pagos/saldo_pendiente.html",
-        {"ventas": ventas, "query": query},
+        {
+            "ventas": ventas,
+            "query": query,
+            "total_deuda": total_deuda,
+        },
     )
 
 
-# core/views.py
 @login_required
 @user_passes_test(es_vendedor, login_url="login")
 def saldo_pendiente(request):
@@ -627,10 +632,16 @@ def saldo_pendiente(request):
             v.ultimo_abono_monto = ultimo.monto if ultimo else None
             ventas.append(v)
 
+    total_deuda = sum(v.saldo_pendiente for v in ventas)
+
     return render(
         request,
         "core/vendedor/pagos/saldo_pendiente.html",
-        {"ventas": ventas, "query": query},
+        {
+            "ventas": ventas,
+            "query": query,
+            "total_deuda": total_deuda,
+        },
     )
 
 

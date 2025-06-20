@@ -1,5 +1,6 @@
 {% extends "core/base_dashboard.html" %}
 {% block title %}Saldo Pendiente{% endblock %}
+{% load miles %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto bg-gray-800 p-6 rounded shadow">
@@ -7,9 +8,9 @@
 
   <form method="get" class="mb-6 flex space-x-2">
     <input name="q" value="{{ query }}" placeholder="Buscar por cliente o factura..."
-      class="flex-1 px-4 py-2 rounded bg-gray-700 text-white focus:ring-green-400" />
+           class="flex-1 px-4 py-2 rounded bg-gray-700 text-white focus:ring-green-400"/>
     <button type="submit"
-      class="bg-green-500 px-4 py-2 font-bold text-black rounded hover:bg-green-600">
+            class="bg-green-500 px-4 py-2 font-bold text-black rounded hover:bg-green-600">
       🔍 Buscar
     </button>
   </form>
@@ -28,15 +29,13 @@
     <tbody class="text-white">
       {% for venta in ventas %}
       <tr class="border-t border-gray-700 hover:bg-gray-800">
-        <td class="px-4 py-2 font-mono text-blue-400">
-          {{ venta.numero_factura }}
-        </td>
+        <td class="px-4 py-2 font-mono text-blue-400">{{ venta.numero_factura }}</td>
         <td class="px-4 py-2">{{ venta.cliente.nombre }}</td>
-        <td class="px-4 py-2 text-right">${{ venta.total_compra }}</td>
-        <td class="px-4 py-2 text-right text-yellow-400">${{ venta.saldo_pendiente }}</td>
+        <td class="px-4 py-2 text-right">${{ venta.total_compra|en_miles }}K</td>
+        <td class="px-4 py-2 text-right text-yellow-400">${{ venta.saldo_pendiente|en_miles }}K</td>
         <td class="px-4 py-2 text-right">
           {% if venta.ultimo_abono_monto %}
-            ${{ venta.ultimo_abono_monto }}
+            ${{ venta.ultimo_abono_monto|en_miles }}K</td>}}
           {% else %}
             —
           {% endif %}
@@ -50,10 +49,19 @@
       </tr>
       {% empty %}
       <tr>
-        <td colspan="6" class="py-4 text-center text-gray-400">No hay ventas a crédito con saldo pendiente.</td>
+        <td colspan="6" class="py-4 text-center text-gray-400">
+          No hay ventas a crédito con saldo pendiente.
+        </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
+
+  <div class="flex justify-end mt-4 text-white space-x-4">
+    <p class="font-semibold">💰 Total Deuda:</p>
+    <p class="text-yellow-300 font-bold text-lg">
+      ${{ total_deuda|en_miles }}K</td>}}
+    </p>
+  </div>
 </div>
 {% endblock %}

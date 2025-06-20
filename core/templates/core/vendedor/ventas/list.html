@@ -31,8 +31,6 @@
       <th class="px-4 py-2">Cliente</th>
       <th class="px-4 py-2">Tipo de Pago</th>
       <th class="px-4 py-2 text-right">Total Venta</th>
-      <th class="px-4 py-2">Último Abono Por</th>
-      <th class="px-4 py-2 text-right">Monto Último Abono</th>
       <th class="px-4 py-2">Fecha</th>
       <th class="px-4 py-2">Estado</th>
       <th class="px-4 py-2">Detalles</th>
@@ -46,15 +44,7 @@
       </td>
       <td class="px-4 py-2">{{ venta.cliente.nombre }}</td>
       <td class="px-4 py-2">{{ venta.tipo_pago|capfirst }}</td>
-      <td class="px-4 py-2 text-right">${{ venta.total|floatformat:2 }}</td>
-      <td class="px-4 py-2">{{ venta.ultimo_abono_por|default:"—" }}</td>
-      <td class="px-4 py-2 text-right">
-        {% if venta.ultimo_abono_monto %}
-          ${{ venta.ultimo_abono_monto|floatformat:2 }}
-        {% else %}
-          —
-        {% endif %}
-      </td>
+      <td class="px-4 py-2 text-right">${{ venta.total|en_miles }}K</td>
       <td class="px-4 py-2">{{ venta.fecha|date:"Y-m-d H:i" }}</td>
       <td class="px-4 py-2">
         <span class="{% if venta.estado == 'activa' %}text-green-400{% else %}text-red-400{% endif %}">
@@ -65,7 +55,7 @@
     </tr>
     {% empty %}
     <tr>
-      <td colspan="9" class="px-4 py-4 text-center text-gray-400">
+      <td colspan="7" class="px-4 py-4 text-center text-gray-400">
         No hay ventas registradas.
       </td>
     </tr>
@@ -76,7 +66,7 @@
 <div class="flex justify-end mt-4 text-white">
   <div class="text-right">
     <p class="font-semibold">🧾 Total Ventas:</p>
-    <p class="text-green-300 font-bold text-lg">${{ total_ventas|floatformat:2 }}</p>
+    <p class="text-green-300 font-bold text-lg">${{ total_ventas|en_miles }}K</td>}}</p>
   </div>
 </div>
 {% endblock %}
