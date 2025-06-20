@@ -296,20 +296,17 @@ def buscar_productos(request):
 
 
 # ventas
-
-
-# core/views.py
 @login_required
 @user_passes_test(es_vendedor, login_url="login")
 def crear_venta(request):
     clientes = Cliente.objects.all()
-    # solo referencia/descr para autocompletar
     productos = Product.objects.all().values("id", "reference", "description")
 
     if request.method == "POST":
         data = request.POST
         cliente_id = data.get("cliente")
         tipo_pago = data.get("tipo_pago", "contado")
+        descuento_mil = Decimal(data.get("descuento", "0"))
         productos_json = json.loads(data.get("productos_data", "[]"))
 
         if not cliente_id or not productos_json:
@@ -320,68 +317,58 @@ def crear_venta(request):
 
         try:
             with transaction.atomic():
-                # --- Prefijo según tipo de pago ---
+                # Prefijo
                 if tipo_pago == "credito":
-                    prefijo = "FC-"
+                    pref = "FC-"
                 elif tipo_pago == "transferencia":
-                    prefijo = "FT-"
+                    pref = "FT-"
                 elif tipo_pago == "garantia":
-                    prefijo = "FG-"
+                    pref = "FG-"
                 else:
-                    prefijo = "FV-"
+                    pref = "FV-"
+                nro = Venta.objects.filter(tipo_pago=tipo_pago).count() + 1
+                factura = f"{pref}{nro}"
 
-                contador = Venta.objects.filter(tipo_pago=tipo_pago).count() + 1
-                numero_factura = f"{prefijo}{contador}"
-
-                # Crear instancia Venta
                 venta = Venta.objects.create(
                     cliente_id=cliente_id,
-                    numero_factura=numero_factura,
+                    numero_factura=factura,
                     tipo_pago=tipo_pago,
                     usuario=request.user,
                 )
 
-                total = Decimal("0")
-                # Recorrer productos enviados
-                for item in productos_json:
-                    prod = Product.objects.get(pk=item["producto_id"])
-                    cantidad = int(item["cantidad"])
-                    precio_unitario = Decimal(str(item["precio_unitario"]))
-
-                    # Validar stock
-                    if prod.stock < cantidad:
-                        raise ValueError(f"Stock insuficiente para {prod.reference}")
-
-                    # Calcular subtotal y guardar VentaItem
-                    subtotal = precio_unitario * cantidad
+                bruto = Decimal("0")
+                for itm in productos_json:
+                    prod = Product.objects.get(pk=itm["producto_id"])
+                    cant = int(itm["cantidad"])
+                    precio = Decimal(str(itm["precio_unitario"]))
+                    if prod.stock < cant:
+                        raise ValueError(f"Stock insuficiente {prod.reference}")
+                    sub = precio * cant
                     VentaItem.objects.create(
                         venta=venta,
                         producto=prod,
-                        cantidad=cantidad,
-                        precio=precio_unitario,
+                        cantidad=cant,
+                        precio=precio,
                     )
-
-                    # Actualizar stock
-                    prod.stock -= cantidad
+                    prod.stock -= cant
                     prod.save()
+                    bruto += sub
 
-                    total += subtotal
-
-                # Guardar total en la venta
-                venta.total = total
+                # Descuento en miles → multiplicar por 1000
+                descuento = descuento_mil
+                total_neto = bruto - descuento
+                venta.total = total_neto if total_neto > 0 else Decimal("0")
                 venta.save()
 
                 messages.success(
-                    request,
-                    f"✅ Venta #{venta.numero_factura} registrada correctamente.",
+                    request, f"✅ Venta #{venta.numero_factura} registrada."
                 )
                 return redirect("venta_vendedor_list")
 
         except Exception as e:
-            messages.error(request, f"❌ Error al registrar la venta: {e}")
+            messages.error(request, f"❌ Error: {e}")
             return redirect("venta_create")
 
-    # GET: renderizar formulario
     return render(
         request,
         "core/vendedor/ventas/create.html",
