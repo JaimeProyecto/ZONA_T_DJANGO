@@ -300,7 +300,9 @@ def buscar_productos(request):
 @user_passes_test(es_vendedor, login_url="login")
 def crear_venta(request):
     clientes = Cliente.objects.all()
-    productos = Product.objects.all().values("id", "reference", "description")
+    productos = Product.objects.all().values(
+        "id", "reference", "description", "sale_price"
+    )
 
     if request.method == "POST":
         data = request.POST
@@ -317,7 +319,7 @@ def crear_venta(request):
 
         try:
             with transaction.atomic():
-                # Prefijo
+                # prefijo
                 if tipo_pago == "credito":
                     pref = "FC-"
                 elif tipo_pago == "transferencia":
@@ -327,11 +329,11 @@ def crear_venta(request):
                 else:
                     pref = "FV-"
                 nro = Venta.objects.filter(tipo_pago=tipo_pago).count() + 1
-                factura = f"{pref}{nro}"
+                fac = f"{pref}{nro}"
 
                 venta = Venta.objects.create(
                     cliente_id=cliente_id,
-                    numero_factura=factura,
+                    numero_factura=fac,
                     tipo_pago=tipo_pago,
                     usuario=request.user,
                 )
@@ -340,7 +342,7 @@ def crear_venta(request):
                 for itm in productos_json:
                     prod = Product.objects.get(pk=itm["producto_id"])
                     cant = int(itm["cantidad"])
-                    precio = Decimal(str(itm["precio_unitario"]))
+                    precio = Decimal(str(prod.sale_price))
                     if prod.stock < cant:
                         raise ValueError(f"Stock insuficiente {prod.reference}")
                     sub = precio * cant
@@ -354,10 +356,10 @@ def crear_venta(request):
                     prod.save()
                     bruto += sub
 
-                # Descuento en miles → multiplicar por 1000
+                # aplicar descuento (mil)
                 descuento = descuento_mil
-                total_neto = bruto - descuento
-                venta.total = total_neto if total_neto > 0 else Decimal("0")
+                neto = bruto - descuento
+                venta.total = neto if neto > 0 else Decimal("0")
                 venta.save()
 
                 messages.success(
