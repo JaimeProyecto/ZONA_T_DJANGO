@@ -1,7 +1,6 @@
 {% extends 'core/base_dashboard.html' %}
 {% block title %}Registrar Venta{% endblock %}
 {% block content %}
-{% load miles %}
 
 <div class="max-w-4xl mx-auto mt-8">
   <h2 class="text-2xl font-bold text-green-400 mb-4">➕ Registrar Venta</h2>
@@ -84,8 +83,9 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+  // formatea con separador de miles (ej: 17000 → "17.000")
   function formatoMiles(n) {
-    return new Intl.NumberFormat('es-CO', { minimumFractionDigits: 0 }).format(n);
+    return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0 }).format(n);
   }
 
   let index = 0;
@@ -94,7 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const productosData  = document.getElementById("productos-data");
   const descuentoInput = document.getElementById("descuento-input");
 
-  // Agregar línea
+  // 1) Agregar línea de producto
   document.getElementById("agregar-producto").addEventListener("click", () => {
     const div = document.createElement("div");
     div.className = "producto bg-zinc-800 p-4 rounded shadow-md";
@@ -120,7 +120,6 @@ document.addEventListener("DOMContentLoaded", () => {
           data-index="${index}"
           placeholder="Cant."
         >
-        <div class="text-sm text-green-300 font-mono hidden stock-label" data-index="${index}"></div>
       </div>
       <div class="mt-2">
         <span class="text-green-300 font-semibold">
@@ -133,33 +132,37 @@ document.addEventListener("DOMContentLoaded", () => {
     index++;
   });
 
-  // Recalcular
+  // 2) Recalcular totales
   function recalcularTotal() {
     let bruto = 0;
     const lista = [];
+
     document.querySelectorAll(".producto").forEach(div => {
       const i    = div.dataset.index;
       const pid  = div.querySelector(`.producto-id[data-index="${i}"]`).value;
       const cant = parseInt(div.querySelector(`.cantidad-input[data-index="${i}"]`).value) || 0;
       const pre  = parseFloat(div.querySelector(`.producto-autocomplete[data-index="${i}"]`).dataset.precio) || 0;
       const sub  = cant * pre;
+
       div.querySelector(`.subtotal[data-index="${i}"]`).textContent = formatoMiles(sub);
-      if (pid && cant>0) {
-        bruto += sub;
-        lista.push({ producto_id: pid, cantidad: cant });
-      }
+      bruto += (pid && cant>0) ? sub : 0;
+      if (pid && cant>0) lista.push({ producto_id: pid, cantidad: cant });
     });
+
     const desc = parseFloat(descuentoInput.value) || 0;
     const neto = Math.max(0, bruto - desc);
+
     totalEl.textContent = formatoMiles(neto);
     productosData.value = JSON.stringify(lista);
   }
 
+  // 3) Validar cantidad vs stock
   function validarCantidad(idx) {
     const cantEl = document.querySelector(`.cantidad-input[data-index="${idx}"]`);
     const auto   = document.querySelector(`.producto-autocomplete[data-index="${idx}"]`);
     const stock  = parseInt(auto.dataset.stock) || 0;
-    let cant     = parseInt(cantEl.value) || 0;
+    let   cant   = parseInt(cantEl.value) || 0;
+
     if (cant > stock) {
       alert("❌ La cantidad excede el stock disponible.");
       cantEl.value = stock;
@@ -168,11 +171,10 @@ document.addEventListener("DOMContentLoaded", () => {
     recalcularTotal();
   }
 
-  // Delegación
+  // 4) Delegaciones de eventos
   document.addEventListener("input", e => {
-    const tgt = e.target;
-    if (tgt.matches(".cantidad-input"))     validarCantidad(tgt.dataset.index);
-    if (tgt.matches(".cantidad-input") || tgt.id === "descuento-input") recalcularTotal();
+    if (e.target.matches(".cantidad-input")) validarCantidad(e.target.dataset.index);
+    if (e.target.matches(".cantidad-input") || e.target === descuentoInput) recalcularTotal();
   });
 
   container.addEventListener("click", e => {
@@ -182,68 +184,77 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Autocomplete cliente
-  document.getElementById("cliente-autocomplete").addEventListener("input", async function(){
-    const q = this.value.trim();
-    const lista = document.getElementById("cliente-sugerencias");
-    if (q.length < 2) return lista.classList.add("hidden");
-    const res = await fetch(`/ajax/buscar-clientes/?q=${q}`);
-    const data = await res.json();
-    lista.innerHTML = "";
-    data.forEach(c => {
-      const div = document.createElement("div");
-      div.textContent = `${c.nombre} (${c.cedula})`;
-      div.className = "p-2 hover:bg-zinc-700 cursor-pointer";
-      div.onclick = () => {
-        this.value = `${c.nombre} (${c.cedula})`;
-        document.getElementById("cliente-id").value = c.id;
-        lista.classList.add("hidden");
-      };
-      lista.appendChild(div);
+  // 5) Autocomplete Cliente
+  document.getElementById("cliente-autocomplete")
+    .addEventListener("input", async function(){
+      const q = this.value.trim();
+      const lista = document.getElementById("cliente-sugerencias");
+      if (q.length < 2) return lista.classList.add("hidden");
+      const res = await fetch(`/ajax/buscar-clientes/?q=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      lista.innerHTML = "";
+      data.forEach(c => {
+        const div = document.createElement("div");
+        div.textContent = `${c.nombre} (${c.cedula})`;
+        div.className   = "p-2 hover:bg-zinc-700 cursor-pointer";
+        div.onclick     = () => {
+          this.value = div.textContent;
+          document.getElementById("cliente-id").value = c.id;
+          lista.classList.add("hidden");
+        };
+        lista.appendChild(div);
+      });
+      lista.classList.remove("hidden");
     });
-    lista.classList.remove("hidden");
-  });
 
-  // Autocomplete producto
+  // 6) Autocomplete Producto + mostrar stock
   document.addEventListener("input", async e => {
     if (!e.target.matches(".producto-autocomplete")) return;
-    const q = e.target.value.trim();
-    const idx = e.target.dataset.index;
+    const q     = e.target.value.trim();
+    const idx   = e.target.dataset.index;
     const lista = e.target.nextElementSibling.nextElementSibling;
     if (q.length < 2) return lista.classList.add("hidden");
-    const res = await fetch(`/ajax/buscar-productos/?q=${q}`);
+
+    const res  = await fetch(`/ajax/buscar-productos/?q=${encodeURIComponent(q)}`);
     const data = await res.json();
     lista.innerHTML = "";
+
     data.forEach(p => {
       const div = document.createElement("div");
       div.textContent = `${p.reference} - ${p.description}`;
-      div.className = "p-2 hover:bg-zinc-700 cursor-pointer";
-      div.onclick = () => {
+      div.className   = "p-2 hover:bg-zinc-700 cursor-pointer";
+      div.onclick     = () => {
+        // evitar duplicados
         if (Array.from(document.querySelectorAll(".producto-id"))
-             .some(el => el.value == p.id)) {
-          alert("⚠️ Ya agregado");
+                 .some(el => el.value == p.id)) {
+          alert("⚠️ Este producto ya fue agregado.");
           lista.classList.add("hidden");
           return;
         }
-        e.target.value = `${p.reference} - ${p.description}`;
-        const hid = document.querySelector(`.producto-id[data-index="${idx}"]`);
-        hid.value = p.id;
+
+        // asignar selección
+        e.target.value = div.textContent;
+        document.querySelector(`.producto-id[data-index="${idx}"]`).value = p.id;
         e.target.dataset.precio = p.sale_price;
-        e.target.dataset.stock = p.stock;
-        // mostrar stock label
-        let lbl = document.querySelector(`.stock-label[data-index="${idx}"]`);
+        e.target.dataset.stock  = p.stock;
+
+        // mostrar/crear etiqueta de stock
+        const productoDiv = e.target.closest(".producto");
+        let lbl = productoDiv.querySelector(`.stock-label[data-index="${idx}"]`);
         if (!lbl) {
           lbl = document.createElement("div");
-          lbl.className = "text-sm text-green-300 font-mono mb-1 stock-label";
+          lbl.className = "stock-label text-sm text-green-300 font-mono mb-1";
           lbl.dataset.index = idx;
-          e.target.closest(".producto").querySelector(".flex").prepend(lbl);
+          productoDiv.querySelector(".flex.items-center.gap-2").prepend(lbl);
         }
         lbl.textContent = `📦 Stock: ${p.stock}`;
+
         validarCantidad(idx);
         lista.classList.add("hidden");
       };
       lista.appendChild(div);
     });
+
     lista.classList.remove("hidden");
   });
 
