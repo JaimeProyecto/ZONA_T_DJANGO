@@ -39,12 +39,6 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
-                    "sale_price",
-                    models.DecimalField(
-                        decimal_places=2, max_digits=10, verbose_name="Valor de Venta"
-                    ),
-                ),
-                (
                     "stock",
                     models.PositiveIntegerField(
                         default=0, verbose_name="Unidades en Existencia"

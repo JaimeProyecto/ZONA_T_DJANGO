@@ -110,7 +110,6 @@ def product_edit(request, producto_id):
         reference = request.POST.get("reference", "").strip()
         description = request.POST.get("description", "").strip()
         purchase_price = request.POST.get("purchase_price")
-        sale_price = request.POST.get("sale_price")
         stock_add = request.POST.get("stock_add")
 
         if not reference or not description:
@@ -120,7 +119,6 @@ def product_edit(request, producto_id):
                 producto.reference = reference
                 producto.description = description
                 producto.purchase_price = float(purchase_price)
-                producto.sale_price = float(sale_price)
                 producto.stock += int(stock_add)
                 producto.save()
 
@@ -286,7 +284,6 @@ def buscar_productos(request):
                 "id": p.id,
                 "reference": p.reference,
                 "description": p.description,
-                "sale_price": float(p.sale_price),
                 "stock": p.stock,  # Agregado aquí
             }
             for p in productos
