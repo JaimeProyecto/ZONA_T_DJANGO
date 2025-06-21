@@ -300,15 +300,15 @@ def buscar_productos(request):
 @user_passes_test(es_vendedor, login_url="login")
 def crear_venta(request):
     clientes = Cliente.objects.all()
-    productos = Product.objects.all().values(
-        "id", "reference", "description", "sale_price"
-    )
+    productos = Product.objects.all().values("id", "reference", "description")
 
     if request.method == "POST":
         data = request.POST
         cliente_id = data.get("cliente")
         tipo_pago = data.get("tipo_pago", "contado")
-        descuento_mil = Decimal(data.get("descuento", "0"))
+        # Procesar descuento con separador de miles
+        descuento_raw = data.get("descuento", "0").replace(".", "")
+        descuento_mil = Decimal(descuento_raw)
         productos_json = json.loads(data.get("productos_data", "[]"))
 
         if not cliente_id or not productos_json:
@@ -319,7 +319,7 @@ def crear_venta(request):
 
         try:
             with transaction.atomic():
-                # prefijo
+                # Prefijo según tipo de pago
                 if tipo_pago == "credito":
                     pref = "FC-"
                 elif tipo_pago == "transferencia":
@@ -328,6 +328,7 @@ def crear_venta(request):
                     pref = "FG-"
                 else:
                     pref = "FV-"
+
                 nro = Venta.objects.filter(tipo_pago=tipo_pago).count() + 1
                 fac = f"{pref}{nro}"
 
@@ -342,9 +343,11 @@ def crear_venta(request):
                 for itm in productos_json:
                     prod = Product.objects.get(pk=itm["producto_id"])
                     cant = int(itm["cantidad"])
-                    precio = Decimal(str(prod.sale_price))
+                    # Tomar precio ingresado manualmente
+                    precio = Decimal(str(itm.get("precio", "0")))
                     if prod.stock < cant:
                         raise ValueError(f"Stock insuficiente {prod.reference}")
+
                     sub = precio * cant
                     VentaItem.objects.create(
                         venta=venta,
@@ -356,11 +359,55 @@ def crear_venta(request):
                     prod.save()
                     bruto += sub
 
-                # aplicar descuento (mil)
-                descuento = descuento_mil
-                neto = bruto - descuento
+                # Aplicar descuento
+                neto = bruto - descuento_mil
                 venta.total = neto if neto > 0 else Decimal("0")
                 venta.save()
+
+                # ——— Aquí: imprimir ticket a la E200i ———
+                try:
+                    from escpos.printer import Usb
+
+                    # Inicializar impresora
+                    p = Usb(0x04B8, 0x0202, timeout=0)
+
+                    # Encabezado centrado con nombre del negocio
+                    p.set(align="center")
+                    p.text("ZONA T\n")
+                    p.set(align="left")
+
+                    # Datos del cliente
+                    p.text(f"{venta.cliente.nombre}\n")
+                    p.text(f"{venta.cliente.direccion}\n")
+                    p.text(f"{venta.cliente.telefono}\n")
+
+                    # Datos de la venta
+                    p.text(f"Venta N° {venta.numero_factura}\n")
+                    p.text(f"Método de pago: {tipo_pago.capitalize()}\n")
+                    p.text("\n")
+                    p.text(
+                        f"Fecha: {timezone.localtime(venta.created_at).strftime('%d/%m/%Y %H:%M')}\n"
+                    )
+                    p.text("-" * 32 + "\n")
+
+                    # Encabezados de detalle
+                    p.text("REF   DESC       CANT  VALOR\n")
+                    p.text("-" * 32 + "\n")
+
+                    # Detalle de ítems
+                    for item in venta.items.all():
+                        ref = item.producto.reference[:10]
+                        desc = item.producto.description[:10]
+                        line = f"{ref:10s} {desc:10s} {item.cantidad:3d} {item.precio:7.2f}\n"
+                        p.text(line)
+
+                    p.text("-" * 32 + "\n")
+                    p.text(f"TOTAL: {venta.total:.2f}\n")
+                    p.cut()
+                except Exception as e:
+                    messages.warning(
+                        request, f"❗ Venta registrada, pero NO se imprimió: {e}"
+                    )
 
                 messages.success(
                     request, f"✅ Venta #{venta.numero_factura} registrada."
