@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Recibo #{{ venta.numero_factura }}</title>
+  <style>
+    @media print {
+      body { width:58mm; margin:0; padding:0 }
+      .no-print { display:none }
+    }
+    body { font-family: monospace; font-size:12px; padding:4px }
+    .center { text-align:center }
+    .bold   { font-weight:bold }
+    .line   { border-top:1px dashed #000; margin:4px 0 }
+    table   { width:100% }
+    td      { padding:2px 0; vertical-align:top }
+    .right  { text-align:right }
+    .footer { margin-top:6px; text-align:center; font-size:10px }
+  </style>
+</head>
+<body>
+
+  <div class="center bold">ZONA T</div>
+  <div class="center">Factura #{{ venta.numero_factura }}</div>
+  <div class="line"></div>
+
+  <table>
+    <tr><td>Cliente:</td><td class="right">{{ venta.cliente.nombre }}</td></tr>
+    <tr><td>Fecha:</td>  <td class="right">{{ venta.fecha|date:"d/m/Y H:i" }}</td></tr>
+  </table>
+
+  <div class="line"></div>
+
+  <table>
+    {% for it in venta.items.all %}
+      <tr>
+        <td>{{ it.cantidad }} × {{ it.producto.description }}</td>
+        <td class="right">${{ it.precio|floatformat:0 }}</td>
+      </tr>
+    {% endfor %}
+  </table>
+
+  <div class="line"></div>
+
+  <table class="bold">
+    <tr>
+      <td>Total:</td>
+      <td class="right">${{ venta.total|floatformat:0 }}</td>
+    </tr>
+  </table>
+
+  <div class="footer">¡Gracias por tu compra!</div>
+
+  <script>
+    window.onload = ()=>{
+      window.print();
+      setTimeout(()=>{
+        window.location.href = "{% url 'venta_vendedor_list' %}";
+      }, 500);
+    };
+  </script>
+
+</body>
+</html>

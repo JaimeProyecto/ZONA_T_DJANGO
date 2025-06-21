@@ -29,7 +29,6 @@
         <th class="py-2 px-4 border-b border-zinc-600 text-left">Referencia</th>
         <th class="py-2 px-4 border-b border-zinc-600 text-left">Descripción</th>
         <th class="py-2 px-4 border-b border-zinc-600 text-left">Precio de Compra</th>
-        <th class="py-2 px-4 border-b border-zinc-600 text-left">Precio de Venta</th>
         <th class="py-2 px-4 border-b border-zinc-600 text-left">Stock</th>
         <th class="py-2 px-4 border-b border-zinc-600 text-left">Acciones</th>
       </tr>
@@ -41,7 +40,6 @@
     <td class="py-2 px-4 border-b border-zinc-700">{{ product.reference }}</td>
     <td class="py-2 px-4 border-b border-zinc-700">{{ product.description }}</td>
     <td class="py-2 px-4 border-b border-zinc-700">${{ product.purchase_price|formato_miles }}</td>
-    <td class="py-2 px-4 border-b border-zinc-700">${{ product.sale_price|formato_miles }}</td>
     <td class="py-2 px-4 border-b border-zinc-700">{{ product.stock }}</td>
     
   </tr>

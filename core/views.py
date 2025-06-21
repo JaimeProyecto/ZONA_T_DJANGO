@@ -153,18 +153,6 @@ def es_vendedor(user):
 
 # --- Clientes ---
 @login_required
-@user_passes_test(es_admin, login_url="login")
-def venta_admin_list(request):
-    ventas = Venta.objects.all().select_related("cliente", "usuario")
-    ventas = ventas.order_by("-fecha")
-    return render(
-        request,
-        "core/admin/ventas/list.html",
-        {"ventas": ventas},
-    )
-
-
-@login_required
 @user_passes_test(es_vendedor, login_url="login")
 def vendedor_cliente_list(request):
     query = request.GET.get("q", "").strip()
@@ -301,14 +289,15 @@ def buscar_productos(request):
 def crear_venta(request):
     clientes = Cliente.objects.all()
     productos = Product.objects.all().values(
-        "id", "reference", "description", "sale_price"
+        "id", "reference", "description", "sale_price", "stock"
     )
 
     if request.method == "POST":
         data = request.POST
         cliente_id = data.get("cliente")
         tipo_pago = data.get("tipo_pago", "contado")
-        descuento_mil = Decimal(data.get("descuento", "0"))
+        descuento_input = data.get("descuento", "0").replace(".", "")  # quitamos puntos
+        descuento_mil = Decimal(descuento_input or "0")
         productos_json = json.loads(data.get("productos_data", "[]"))
 
         if not cliente_id or not productos_json:
@@ -319,7 +308,7 @@ def crear_venta(request):
 
         try:
             with transaction.atomic():
-                # prefijo
+                # Generar prefijo
                 if tipo_pago == "credito":
                     pref = "FC-"
                 elif tipo_pago == "transferencia":
@@ -356,16 +345,15 @@ def crear_venta(request):
                     prod.save()
                     bruto += sub
 
-                # aplicar descuento (mil)
-                descuento = descuento_mil
-                neto = bruto - descuento
+                # aplicar descuento
+                neto = bruto - descuento_mil
                 venta.total = neto if neto > 0 else Decimal("0")
                 venta.save()
 
                 messages.success(
                     request, f"✅ Venta #{venta.numero_factura} registrada."
                 )
-                return redirect("venta_vendedor_list")
+                return redirect("venta_print", pk=venta.pk)
 
         except Exception as e:
             messages.error(request, f"❌ Error: {e}")
@@ -382,17 +370,12 @@ def crear_venta(request):
 
 
 @login_required
-@user_passes_test(es_admin, login_url="login")
-def venta_admin_detail(request, venta_id):
-    venta = get_object_or_404(Venta, id=venta_id)
-    return render(request, "core/admin/ventas/detail.html", {"venta": venta})
-
-
-@login_required
 @user_passes_test(es_vendedor, login_url="login")
-def venta_vendedor_detail(request, venta_id):
-    venta = get_object_or_404(Venta, id=venta_id, usuario=request.user)
-    return render(request, "core/vendedor/ventas/detail.html", {"venta": venta})
+def venta_print(request, pk):
+    venta = get_object_or_404(
+        Venta.objects.prefetch_related("items__producto", "cliente"), pk=pk
+    )
+    return render(request, "core/vendedor/ventas/receipt.html", {"venta": venta})
 
 
 # core/views.py
@@ -959,7 +942,6 @@ def cargar_productos_excel(request):
                 defaults={
                     "description": descripcion,
                     "purchase_price": valor_compra,
-                    "sale_price": precio,
                     "stock": stock,
                 },
             )
