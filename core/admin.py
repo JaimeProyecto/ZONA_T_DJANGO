@@ -9,8 +9,12 @@ class ClienteAdmin(admin.ModelAdmin):
 
 
 @admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):  # ✅ Nombre correcto
-    list_display = ("reference", "description", "sale_price", "stock")
+class ProductAdmin(admin.ModelAdmin):
+    # Quitado 'sale_price' pues ya no existe en el modelo
+    list_display = ("reference", "description", "stock")
+    # Puedes agregar otros campos o funcionalidades aquí
+    # Ejemplo: filtros por stock bajo
+    list_filter = ("stock",)
     search_fields = ("reference", "description")
 
 
