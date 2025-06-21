@@ -1003,7 +1003,6 @@ def cargar_productos_excel(request):
                 defaults={
                     "description": descripcion,
                     "purchase_price": valor_compra,
-                    "sale_price": precio,
                     "stock": stock,
                 },
             )
