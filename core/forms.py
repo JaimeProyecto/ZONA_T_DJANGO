@@ -1,14 +1,12 @@
-# core/forms.py
 from django import forms
-from .models import Product
-from .models import Cliente
-from .models import Abono
+from .models import Product, Cliente, Abono
 
 
 class ProductForm(forms.ModelForm):
     class Meta:
         model = Product
-        fields = ["reference", "description", "purchase_price", "sale_price", "stock"]
+        # Eliminado 'sale_price' pues ya no existe en el modelo
+        fields = ["reference", "description", "purchase_price", "stock"]
         widgets = {
             "reference": forms.TextInput(
                 attrs={
@@ -42,9 +40,7 @@ class ProductForm(forms.ModelForm):
 class ClienteForm(forms.ModelForm):
     class Meta:
         model = Cliente
-
         exclude = ["creado_por"]
-
         widgets = {
             "nombre": forms.TextInput(attrs={"class": "form-input"}),
             "cedula": forms.TextInput(attrs={"class": "form-input"}),
