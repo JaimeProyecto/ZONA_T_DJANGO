@@ -30,13 +30,6 @@ class ProductForm(forms.ModelForm):
                     "placeholder": "Precio de compra",
                 }
             ),
-            "sale_price": forms.NumberInput(
-                attrs={
-                    "class": "w-full bg-gray-700 text-white rounded px-3 py-2",
-                    "step": "0.01",
-                    "placeholder": "Precio de venta",
-                }
-            ),
             "stock": forms.NumberInput(
                 attrs={
                     "class": "w-full bg-gray-700 text-white rounded px-3 py-2",

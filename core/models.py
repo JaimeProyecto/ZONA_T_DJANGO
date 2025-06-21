@@ -30,9 +30,6 @@ class Product(models.Model):
     purchase_price = models.DecimalField(
         max_digits=10, decimal_places=2, verbose_name="Valor de Compra"
     )
-    sale_price = models.DecimalField(
-        max_digits=10, decimal_places=2, verbose_name="Valor de Venta"
-    )
     stock = models.PositiveIntegerField(
         default=0, verbose_name="Unidades en Existencia"
     )
