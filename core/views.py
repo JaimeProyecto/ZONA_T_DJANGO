@@ -368,6 +368,9 @@ def crear_venta(request):
                     # Inicializar impresora
                     p = Usb(0x04B8, 0x0202, timeout=0)
 
+                    # DEBUG antes de empezar a imprimir
+                    print(">>> [DEBUG] enviando ticket a la impresora…")
+
                     # Encabezado centrado con nombre del negocio
                     p.set(align="center")
                     p.text("ZONA T\n")
@@ -401,6 +404,10 @@ def crear_venta(request):
                     p.text("-" * 32 + "\n")
                     p.text(f"TOTAL: {venta.total:.2f}\n")
                     p.cut()
+
+                    # DEBUG justo después de cortar
+                    print(">>> [DEBUG] p.cut() ejecutado con éxito")
+
                     messages.info(request, "🖨️ Ticket enviado a la impresora E200i.")
                 except Exception as e:
                     messages.warning(
