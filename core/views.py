@@ -401,6 +401,7 @@ def crear_venta(request):
                     p.text("-" * 32 + "\n")
                     p.text(f"TOTAL: {venta.total:.2f}\n")
                     p.cut()
+                    messages.info(request, "🖨️ Ticket enviado a la impresora E200i.")
                 except Exception as e:
                     messages.warning(
                         request, f"❗ Venta registrada, pero NO se imprimió: {e}"
