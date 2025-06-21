@@ -1,20 +1,23 @@
 # core/urls.py
 from django.urls import path
 from django.shortcuts import redirect
+
+# Vistas «globales»
 from . import views
+
+# Vistas de vendedor
 from core.vendedor import views as vendedor_views
 
 urlpatterns = [
-    # --- Autenticación y redirección por rol ---
-    path("", lambda request: redirect("login/")),
+    # --- Auth & Dashboards ---
+    path("", lambda r: redirect("login/")),
     path("login/", views.login_view, name="login"),
     path("redirect-by-role/", views.redirect_by_role, name="redirect_by_role"),
-    # --- Dashboards ---
     path("panel-admin/dashboard/", views.admin_dashboard, name="admin_dashboard"),
     path(
         "panel-vendedor/dashboard/", views.vendedor_dashboard, name="vendedor_dashboard"
     ),
-    # --- Gestión de productos ---
+    # --- Productos ---
     path("panel-admin/products/", views.admin_product_list, name="admin_product_list"),
     path(
         "panel-vendedor/products/",
@@ -25,7 +28,7 @@ urlpatterns = [
     path("producto/<int:producto_id>/editar/", views.product_edit, name="product_edit"),
     path("productos/<int:pk>/eliminar/", views.product_delete, name="product_delete"),
     path("productos/cargar/", views.cargar_productos_excel, name="cargar_productos"),
-    # --- Gestión de clientes ---
+    # --- Clientes ---
     path("panel-admin/clientes/", views.admin_cliente_list, name="admin_cliente_list"),
     path(
         "panel-vendedor/clientes/",
@@ -42,8 +45,14 @@ urlpatterns = [
     path(
         "clientes/<int:cliente_id>/delete/", views.cliente_delete, name="cliente_delete"
     ),
-    # --- Gestión de ventas ---
-    # Vendedor
+    # --- Ventas Admin ---
+    path("panel-admin/ventas/", views.venta_admin_list, name="venta_admin_list"),
+    path(
+        "panel-admin/ventas/<int:venta_id>/detalle/",
+        views.venta_admin_detail,
+        name="venta_admin_detail",
+    ),
+    # --- Ventas Vendedor ---
     path(
         "panel-vendedor/ventas/crear/", vendedor_views.crear_venta, name="venta_create"
     ),
@@ -62,16 +71,9 @@ urlpatterns = [
         views.venta_vendedor_detail,
         name="venta_vendedor_detail",
     ),
-    # Admin
-    path("panel-admin/ventas/", views.venta_admin_list, name="venta_admin_list"),
-    path(
-        "panel-admin/ventas/<int:venta_id>/detalle/",
-        views.venta_admin_detail,
-        name="venta_admin_detail",
-    ),
-    # Anular
+    # --- Anular Venta ---
     path("ventas/<int:venta_id>/anular/", views.venta_delete, name="venta_delete"),
-    # --- Gestión de pagos ---
+    # --- Pagos ---
     path("pagos/registrar-abono/", views.registrar_abono, name="registrar_abono"),
     path(
         "panel-admin/pagos/saldos/",
@@ -79,7 +81,7 @@ urlpatterns = [
         name="saldo_pendiente_admin",
     ),
     path("pagos/saldo-pendiente/", views.saldo_pendiente, name="saldo_pendiente"),
-    # --- Reportes ---
+    # --- Reportes y exportaciones ---
     path("reportes/", views.reportes_index, name="reportes_index"),
     path(
         "reportes/ventas-diarias/",
@@ -96,7 +98,6 @@ urlpatterns = [
         views.reporte_productos_mas_vendidos,
         name="reporte_productos_mas_vendidos",
     ),
-    # --- Exportaciones a Excel ---
     path(
         "reportes/ventas-diarias/exportar/<fecha>/",
         views.exportar_ventas_excel,
@@ -122,7 +123,7 @@ urlpatterns = [
         views.exportar_ventas_excel_admin,
         name="exportar_ventas_excel_admin",
     ),
-    # --- AJAX (autocompletado) ---
+    # --- AJAX Autocomplete ---
     path("ajax/buscar-clientes/", views.buscar_clientes, name="buscar_clientes"),
     path("ajax/buscar-productos/", views.buscar_productos, name="buscar_productos"),
 ]
