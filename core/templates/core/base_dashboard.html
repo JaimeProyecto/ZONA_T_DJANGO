@@ -27,38 +27,44 @@
 
         {% if user.is_superuser %}
           <a href="{% url 'admin_product_list' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Gestión de Productos</a>
-        {% else %}
-          <a href="{% url 'vendedor_product_list' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Gestión de Productos</a>
-        {% endif %}
-
-        {% if user.is_superuser %}
           <a href="{% url 'admin_cliente_list' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Gestión de Clientes</a>
-        {% else %}
-          <a href="{% url 'vendedor_cliente_list' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Gestión de Clientes</a>
-        {% endif %}
-       
-        {% if user.is_superuser %}
           <a href="{% url 'venta_admin_list' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Gestión de Ventas</a>
-        {% else %}
-          <a href="{% url 'venta_vendedor_list' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Gestión de Ventas</a>
-        {% endif %}
-
-        {% if user.is_superuser %}
           <a href="{% url 'saldo_pendiente_admin' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Gestión de Pagos</a>
         {% else %}
+          <a href="{% url 'vendedor_product_list' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Gestión de Productos</a>
+          <a href="{% url 'vendedor_cliente_list' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Gestión de Clientes</a>
+          <a href="{% url 'venta_vendedor_list' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Gestión de Ventas</a>
           <a href="{% url 'saldo_pendiente' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Gestión de Pagos</a>
         {% endif %}
 
-        <a href="{% url 'admin_dashboard' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Reportes</a>
+        <a href="{% url 'reportes_index' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Reportes</a>
       </nav>
 
-      <a href="{% url 'login' %}" class="mt-8 bg-green-500 text-black text-center py-2 rounded font-bold hover:bg-green-600">
+      <a href="{% url 'logout' %}" class="mt-8 bg-green-500 text-black text-center py-2 rounded font-bold hover:bg-green-600">
         Cerrar sesión
       </a>
     </aside>
 
     <!-- Main content -->
     <main class="flex-1 p-8 overflow-auto">
+
+      {# ————— Mensajes flash ————— #}
+      {% if messages %}
+        <div class="container mx-auto mt-4">
+          {% for msg in messages %}
+            <div
+              class="px-4 py-2 mb-2 rounded
+                     {% if msg.tags == 'success' %}bg-green-500 text-white{% endif %}
+                     {% if msg.tags == 'error'   %}bg-red-500   text-white{% endif %}
+                     {% if msg.tags == 'warning' %}bg-yellow-400 text-black{% endif %}
+                     {% if msg.tags == 'info'    %}bg-blue-500  text-white{% endif %}"
+            >
+              {{ msg }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+
       {% block content %}{% endblock %}
     </main>
 

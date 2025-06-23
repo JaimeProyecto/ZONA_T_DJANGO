@@ -404,6 +404,7 @@ def crear_venta(request):
 @login_required
 @user_passes_test(es_vendedor, login_url="login")
 def imprimir_venta(request, venta_id):
+    print(f">>> [DEBUG] imprimir_venta llamada para venta {venta_id}")
     venta = get_object_or_404(Venta, pk=venta_id)
     try:
         p = _abrir_impresora_usb()
