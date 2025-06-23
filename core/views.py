@@ -1,27 +1,27 @@
 import json
+from datetime import datetime, timedelta
+from decimal import Decimal
+
+import openpyxl
+
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import login as auth_login
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import AuthenticationForm
+from django.db import transaction
 from django.db.models import Sum, F, Q, Value, ExpressionWrapper, DecimalField, Count
 from django.db.models.functions import Coalesce
-from django.db import transaction
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
-from django.utils.timezone import localdate
 from django.utils import timezone
+from django.utils.dateparse import parse_date
+
+from escpos.printer import Usb as EscposUsb
+
+from .decorators import es_vendedor
 from .forms import ProductForm, ClienteForm, AbonoForm
 from .models import Cliente, Product, Venta, VentaItem, Abono
-from datetime import timedelta
-import openpyxl
-from django.http import HttpResponse
-from django.utils.dateparse import parse_date
-from datetime import datetime
-from django.http import JsonResponse
-from decimal import Decimal
-from django.contrib.auth.decorators import user_passes_test
-import usb.core
-from django.conf import settings
-from escpos.printer import Usb as EscposUsb
 
 
 # --- Login y redirección por rol ---
@@ -298,17 +298,15 @@ def buscar_productos(request):
 # ventas
 def _abrir_impresora_usb():
     """
-    Intenta abrir cualquier impresora USB de clase impresora.
+    Intenta abrir cualquier impresora USB de clase impresora (bDeviceClass == 7).
     Si PyUSB no está disponible o no se encuentra ninguna impresora,
-    usa el fallback de IDs definidos en settings.
+    hace fallback a los IDs configurados en settings.
     """
-    # Intentar importación dinámica de pyusb
     try:
         import usb.core
     except ImportError:
         usb = None
 
-    # 1) Si pyusb está disponible, buscar impresoras USB (clase 7)
     if usb:
         for dev in usb.core.find(
             find_all=True, custom_match=lambda d: d.bDeviceClass == 7
@@ -320,15 +318,12 @@ def _abrir_impresora_usb():
             except Exception:
                 continue
 
-    # 2) Fallback a IDs configurados en settings.py
-    try:
-        return EscposUsb(
-            settings.ESC_POS_USB_VENDOR,
-            settings.ESC_POS_USB_PRODUCT,
-            timeout=settings.ESC_POS_USB_TIMEOUT,
-        )
-    except Exception as e:
-        raise RuntimeError(f"No se pudo abrir impresora USB: {e}")
+    # Fallback a IDs definidos en settings.py
+    return EscposUsb(
+        settings.ESC_POS_USB_VENDOR,
+        settings.ESC_POS_USB_PRODUCT,
+        timeout=settings.ESC_POS_USB_TIMEOUT,
+    )
 
 
 @login_required
@@ -353,7 +348,6 @@ def crear_venta(request):
 
         try:
             with transaction.atomic():
-                # Prefijo según tipo de pago
                 prefijos = {"credito": "FC-", "transferencia": "FT-", "garantia": "FG-"}
                 pref = prefijos.get(tipo_pago, "FV-")
 
@@ -386,7 +380,6 @@ def crear_venta(request):
                     prod.save()
                     bruto += sub
 
-                # Aplicar descuento y guardar total
                 neto = bruto - descuento_mil
                 venta.total = neto if neto > 0 else Decimal("0")
                 venta.save()
@@ -412,20 +405,16 @@ def crear_venta(request):
 def imprimir_venta(request, venta_id):
     venta = get_object_or_404(Venta, pk=venta_id)
     try:
-        # Obtener impresora USB
         p = _abrir_impresora_usb()
 
-        # Tirilla: encabezado
         p.set(align="center")
         p.text("ZONA T\n")
         p.set(align="left")
 
-        # Detalles de cliente
         p.text(f"{venta.cliente.nombre}\n")
         p.text(f"{venta.cliente.direccion}\n")
         p.text(f"{venta.cliente.telefono}\n")
 
-        # Datos de la venta
         p.text(f"Venta N° {venta.numero_factura}\n")
         p.text(f"Método de pago: {venta.tipo_pago.capitalize()}\n\n")
         p.text(
@@ -433,7 +422,6 @@ def imprimir_venta(request, venta_id):
         )
         p.text("-" * 32 + "\n")
 
-        # Encabezados y detalle
         p.text("REF   DESC       CANT  VALOR\n")
         p.text("-" * 32 + "\n")
         for item in venta.items.all():
@@ -442,7 +430,6 @@ def imprimir_venta(request, venta_id):
             p.text(f"{ref:10s} {desc:10s} {item.cantidad:3d} {item.precio:7.2f}\n")
         p.text("-" * 32 + "\n")
 
-        # Total y corte
         p.text(f"TOTAL: {venta.total:.2f}\n")
         p.cut()
 
