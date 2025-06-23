@@ -296,29 +296,39 @@ def buscar_productos(request):
 
 
 # ventas
-@login_required
-@user_passes_test(es_vendedor, login_url="login")
-@user_passes_test(es_admin, login_url="login")
 def _abrir_impresora_usb():
     """
-    Intenta encontrar cualquier dispositivo USB de clase impresora (bDeviceClass == 7).
-    Si no halla ninguno, cae al fallback de los IDs en settings.
+    Intenta abrir cualquier impresora USB de clase impresora.
+    Si PyUSB no está disponible o no se encuentra ninguna impresora,
+    usa el fallback de IDs definidos en settings.
     """
-    # 1) Detectar impresoras USB por Device Class
-    for dev in usb.core.find(find_all=True, custom_match=lambda d: d.bDeviceClass == 7):
-        try:
-            return EscposUsb(
-                dev.idVendor, dev.idProduct, timeout=settings.ESC_POS_USB_TIMEOUT
-            )
-        except Exception:
-            continue
+    # Intentar importación dinámica de pyusb
+    try:
+        import usb.core
+    except ImportError:
+        usb = None
 
-    # 2) Fallback a valores configurados en settings.py
-    return EscposUsb(
-        settings.ESC_POS_USB_VENDOR,
-        settings.ESC_POS_USB_PRODUCT,
-        timeout=settings.ESC_POS_USB_TIMEOUT,
-    )
+    # 1) Si pyusb está disponible, buscar impresoras USB (clase 7)
+    if usb:
+        for dev in usb.core.find(
+            find_all=True, custom_match=lambda d: d.bDeviceClass == 7
+        ):
+            try:
+                return EscposUsb(
+                    dev.idVendor, dev.idProduct, timeout=settings.ESC_POS_USB_TIMEOUT
+                )
+            except Exception:
+                continue
+
+    # 2) Fallback a IDs configurados en settings.py
+    try:
+        return EscposUsb(
+            settings.ESC_POS_USB_VENDOR,
+            settings.ESC_POS_USB_PRODUCT,
+            timeout=settings.ESC_POS_USB_TIMEOUT,
+        )
+    except Exception as e:
+        raise RuntimeError(f"No se pudo abrir impresora USB: {e}")
 
 
 @login_required
@@ -344,14 +354,8 @@ def crear_venta(request):
         try:
             with transaction.atomic():
                 # Prefijo según tipo de pago
-                if tipo_pago == "credito":
-                    pref = "FC-"
-                elif tipo_pago == "transferencia":
-                    pref = "FT-"
-                elif tipo_pago == "garantia":
-                    pref = "FG-"
-                else:
-                    pref = "FV-"
+                prefijos = {"credito": "FC-", "transferencia": "FT-", "garantia": "FG-"}
+                pref = prefijos.get(tipo_pago, "FV-")
 
                 nro = Venta.objects.filter(tipo_pago=tipo_pago).count() + 1
                 fac = f"{pref}{nro}"
@@ -408,15 +412,15 @@ def crear_venta(request):
 def imprimir_venta(request, venta_id):
     venta = get_object_or_404(Venta, pk=venta_id)
     try:
-        # Obtener impresora USB (detecta cualquier modelo o usa fallback)
+        # Obtener impresora USB
         p = _abrir_impresora_usb()
 
-        # Encabezado centrado
+        # Tirilla: encabezado
         p.set(align="center")
         p.text("ZONA T\n")
         p.set(align="left")
 
-        # Datos del cliente
+        # Detalles de cliente
         p.text(f"{venta.cliente.nombre}\n")
         p.text(f"{venta.cliente.direccion}\n")
         p.text(f"{venta.cliente.telefono}\n")
@@ -429,24 +433,22 @@ def imprimir_venta(request, venta_id):
         )
         p.text("-" * 32 + "\n")
 
-        # Encabezados de detalle
+        # Encabezados y detalle
         p.text("REF   DESC       CANT  VALOR\n")
         p.text("-" * 32 + "\n")
-
-        # Detalle de ítems
         for item in venta.items.all():
             ref = item.producto.reference[:10]
             desc = item.producto.description[:10]
             p.text(f"{ref:10s} {desc:10s} {item.cantidad:3d} {item.precio:7.2f}\n")
-
         p.text("-" * 32 + "\n")
+
+        # Total y corte
         p.text(f"TOTAL: {venta.total:.2f}\n")
         p.cut()
 
         messages.success(request, "🖨️ Tirilla enviada a la impresora.")
     except Exception as e:
         messages.error(request, f"❗ Error al imprimir: {e}")
-
     return redirect("venta_vendedor_list")
 
 
