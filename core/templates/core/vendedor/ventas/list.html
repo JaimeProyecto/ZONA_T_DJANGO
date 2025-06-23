@@ -34,7 +34,7 @@
       <th class="px-4 py-2 text-right">Total Venta</th>
       <th class="px-4 py-2">Fecha</th>
       <th class="px-4 py-2">Estado</th>
-      <th class="px-4 py-2">Detalles</th>
+      <th class="px-4 py-2">Acciones</th>
     </tr>
   </thead>
   <tbody>
@@ -52,7 +52,10 @@
           {{ venta.estado|capfirst }}
         </span>
       </td>
-      <td class="px-4 py-2"><a href="{% url 'venta_vendedor_detail' venta.id %}">Ver</a></td>
+      <td class="px-4 py-2 flex space-x-2">
+        <a href="{% url 'venta_vendedor_detail' venta.id %}" class="hover:underline">Ver</a>
+        <a href="{% url 'venta_print' venta.id %}" class="text-blue-400 hover:underline">🖨️ Imprimir</a>
+      </td>
     </tr>
     {% empty %}
     <tr>

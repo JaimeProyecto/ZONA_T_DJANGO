@@ -108,3 +108,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Login
 LOGIN_URL = "/login/"
 LOGIN_REDIRECT_URL = "/redirect-by-role/"
+# settings.py
+ESC_POS_USB_VENDOR = 0x04B8
+ESC_POS_USB_PRODUCT = 0x0202
+ESC_POS_USB_TIMEOUT = 0  # ó el valor que necesites

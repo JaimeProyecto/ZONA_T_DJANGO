@@ -1,3 +1,4 @@
+```html
 {# core/templates/core/admin/ventas/detail.html #}
 {% extends "core/base_dashboard.html" %}
 {% block title %}Detalle de Venta – ZONA T{% endblock %}
@@ -8,8 +9,14 @@
 <div class="max-w-4xl mx-auto mt-8 bg-zinc-800 p-6 rounded-2xl shadow-lg text-white">
   <div class="flex justify-between items-center mb-4">
     <h2 class="text-2xl font-bold text-green-400">📄 Factura #{{ venta.numero_factura }}</h2>
-
-    {% if venta.estado == 'activa' %}
+    <div class="flex space-x-2">
+      <!-- Botón Imprimir -->
+      <a href="{% url 'venta_print' venta.id %}"
+         class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
+        🖨️ Imprimir
+      </a>
+      <!-- Anular factura -->
+      {% if venta.estado == 'activa' %}
       <form action="{% url 'venta_delete' venta.id %}" method="post">
         {% csrf_token %}
         <button 
@@ -19,9 +26,10 @@
           🛑 Anular factura
         </button>
       </form>
-    {% else %}
+      {% else %}
       <span class="text-red-400 font-semibold">🛑 Venta Anulada</span>
-    {% endif %}
+      {% endif %}
+    </div>
   </div>
 
   <div class="space-y-2 text-sm">
@@ -30,9 +38,9 @@
     <p><strong class="text-green-300">💳 Tipo de pago:</strong> {{ venta.get_tipo_pago_display }}</p>
     <p><strong class="text-green-300">📌 Estado:</strong>
       {% if venta.estado == "anulada" %}
-        <span class="text-red-400 font-semibold">Anulada</span>
+      <span class="text-red-400 font-semibold">Anulada</span>
       {% else %}
-        <span class="text-green-400 font-semibold">Activa</span>
+      <span class="text-green-400 font-semibold">Activa</span>
       {% endif %}
     </p>
   </div>
@@ -51,16 +59,16 @@
     </thead>
     <tbody>
       {% for item in venta.items.all %}
-        <tr class="border-b border-zinc-700 hover:bg-zinc-800 transition">
-          <td class="px-4 py-2">{{ item.producto.description }}</td>
-          <td class="px-4 py-2">{{ item.cantidad }}</td>
-          <td class="px-4 py-2">${{ item.precio|formato_miles }}</td>
-          <td class="px-4 py-2">${{ item.subtotal|formato_miles }}</td>
-        </tr>
+      <tr class="border-b border-zinc-700 hover:bg-zinc-800 transition">
+        <td class="px-4 py-2">{{ item.producto.description }}</td>
+        <td class="px-4 py-2">{{ item.cantidad }}</td>
+        <td class="px-4 py-2">${{ item.precio|formato_miles }}</td>
+        <td class="px-4 py-2">${{ item.subtotal|formato_miles }}</td>
+      </tr>
       {% empty %}
-        <tr>
-          <td colspan="4" class="text-center text-zinc-400 py-4">No hay productos registrados.</td>
-        </tr>
+      <tr>
+        <td colspan="4" class="text-center text-zinc-400 py-4">No hay productos registrados.</td>
+      </tr>
       {% endfor %}
     </tbody>
   </table>
@@ -70,3 +78,4 @@
   <p class="text-right text-xl font-bold text-green-300">💰 Total: ${{ venta.total|formato_miles }}</p>
 </div>
 {% endblock %}
+```

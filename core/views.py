@@ -19,6 +19,9 @@ from datetime import datetime
 from django.http import JsonResponse
 from decimal import Decimal
 from django.contrib.auth.decorators import user_passes_test
+import usb.core
+from django.conf import settings
+from escpos.printer import Usb as EscposUsb
 
 
 # --- Login y redirección por rol ---
@@ -295,6 +298,31 @@ def buscar_productos(request):
 # ventas
 @login_required
 @user_passes_test(es_vendedor, login_url="login")
+@user_passes_test(es_admin, login_url="login")
+def _abrir_impresora_usb():
+    """
+    Intenta encontrar cualquier dispositivo USB de clase impresora (bDeviceClass == 7).
+    Si no halla ninguno, cae al fallback de los IDs en settings.
+    """
+    # 1) Detectar impresoras USB por Device Class
+    for dev in usb.core.find(find_all=True, custom_match=lambda d: d.bDeviceClass == 7):
+        try:
+            return EscposUsb(
+                dev.idVendor, dev.idProduct, timeout=settings.ESC_POS_USB_TIMEOUT
+            )
+        except Exception:
+            continue
+
+    # 2) Fallback a valores configurados en settings.py
+    return EscposUsb(
+        settings.ESC_POS_USB_VENDOR,
+        settings.ESC_POS_USB_PRODUCT,
+        timeout=settings.ESC_POS_USB_TIMEOUT,
+    )
+
+
+@login_required
+@user_passes_test(es_vendedor, login_url="login")
 def crear_venta(request):
     clientes = Cliente.objects.all()
     productos = Product.objects.all().values("id", "reference", "description")
@@ -303,7 +331,6 @@ def crear_venta(request):
         data = request.POST
         cliente_id = data.get("cliente")
         tipo_pago = data.get("tipo_pago", "contado")
-        # Procesar descuento con separador de miles
         descuento_raw = data.get("descuento", "0").replace(".", "")
         descuento_mil = Decimal(descuento_raw)
         productos_json = json.loads(data.get("productos_data", "[]"))
@@ -340,7 +367,6 @@ def crear_venta(request):
                 for itm in productos_json:
                     prod = Product.objects.get(pk=itm["producto_id"])
                     cant = int(itm["cantidad"])
-                    # Tomar precio ingresado manualmente
                     precio = Decimal(str(itm.get("precio", "0")))
                     if prod.stock < cant:
                         raise ValueError(f"Stock insuficiente {prod.reference}")
@@ -356,63 +382,10 @@ def crear_venta(request):
                     prod.save()
                     bruto += sub
 
-                # Aplicar descuento
+                # Aplicar descuento y guardar total
                 neto = bruto - descuento_mil
                 venta.total = neto if neto > 0 else Decimal("0")
                 venta.save()
-
-                # ——— Aquí: imprimir ticket a la E200i ———
-                try:
-                    from escpos.printer import Usb
-
-                    # Inicializar impresora
-                    p = Usb(0x04B8, 0x0202, timeout=0)
-
-                    # DEBUG antes de empezar a imprimir
-                    print(">>> [DEBUG] enviando ticket a la impresora…")
-
-                    # Encabezado centrado con nombre del negocio
-                    p.set(align="center")
-                    p.text("ZONA T\n")
-                    p.set(align="left")
-
-                    # Datos del cliente
-                    p.text(f"{venta.cliente.nombre}\n")
-                    p.text(f"{venta.cliente.direccion}\n")
-                    p.text(f"{venta.cliente.telefono}\n")
-
-                    # Datos de la venta
-                    p.text(f"Venta N° {venta.numero_factura}\n")
-                    p.text(f"Método de pago: {tipo_pago.capitalize()}\n")
-                    p.text("\n")
-                    p.text(
-                        f"Fecha: {timezone.localtime(venta.created_at).strftime('%d/%m/%Y %H:%M')}\n"
-                    )
-                    p.text("-" * 32 + "\n")
-
-                    # Encabezados de detalle
-                    p.text("REF   DESC       CANT  VALOR\n")
-                    p.text("-" * 32 + "\n")
-
-                    # Detalle de ítems
-                    for item in venta.items.all():
-                        ref = item.producto.reference[:10]
-                        desc = item.producto.description[:10]
-                        line = f"{ref:10s} {desc:10s} {item.cantidad:3d} {item.precio:7.2f}\n"
-                        p.text(line)
-
-                    p.text("-" * 32 + "\n")
-                    p.text(f"TOTAL: {venta.total:.2f}\n")
-                    p.cut()
-
-                    # DEBUG justo después de cortar
-                    print(">>> [DEBUG] p.cut() ejecutado con éxito")
-
-                    messages.info(request, "🖨️ Ticket enviado a la impresora E200i.")
-                except Exception as e:
-                    messages.warning(
-                        request, f"❗ Venta registrada, pero NO se imprimió: {e}"
-                    )
 
                 messages.success(
                     request, f"✅ Venta #{venta.numero_factura} registrada."
@@ -426,11 +399,55 @@ def crear_venta(request):
     return render(
         request,
         "core/vendedor/ventas/create.html",
-        {
-            "clientes": clientes,
-            "productos": list(productos),
-        },
+        {"clientes": clientes, "productos": list(productos)},
     )
+
+
+@login_required
+@user_passes_test(es_vendedor, login_url="login")
+def imprimir_venta(request, venta_id):
+    venta = get_object_or_404(Venta, pk=venta_id)
+    try:
+        # Obtener impresora USB (detecta cualquier modelo o usa fallback)
+        p = _abrir_impresora_usb()
+
+        # Encabezado centrado
+        p.set(align="center")
+        p.text("ZONA T\n")
+        p.set(align="left")
+
+        # Datos del cliente
+        p.text(f"{venta.cliente.nombre}\n")
+        p.text(f"{venta.cliente.direccion}\n")
+        p.text(f"{venta.cliente.telefono}\n")
+
+        # Datos de la venta
+        p.text(f"Venta N° {venta.numero_factura}\n")
+        p.text(f"Método de pago: {venta.tipo_pago.capitalize()}\n\n")
+        p.text(
+            f"Fecha: {timezone.localtime(venta.created_at).strftime('%d/%m/%Y %H:%M')}\n"
+        )
+        p.text("-" * 32 + "\n")
+
+        # Encabezados de detalle
+        p.text("REF   DESC       CANT  VALOR\n")
+        p.text("-" * 32 + "\n")
+
+        # Detalle de ítems
+        for item in venta.items.all():
+            ref = item.producto.reference[:10]
+            desc = item.producto.description[:10]
+            p.text(f"{ref:10s} {desc:10s} {item.cantidad:3d} {item.precio:7.2f}\n")
+
+        p.text("-" * 32 + "\n")
+        p.text(f"TOTAL: {venta.total:.2f}\n")
+        p.cut()
+
+        messages.success(request, "🖨️ Tirilla enviada a la impresora.")
+    except Exception as e:
+        messages.error(request, f"❗ Error al imprimir: {e}")
+
+    return redirect("venta_vendedor_list")
 
 
 @login_required

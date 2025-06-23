@@ -115,4 +115,5 @@ urlpatterns = [
     # --- AJAX (autocompletado) ---
     path("ajax/buscar-clientes/", views.buscar_clientes, name="buscar_clientes"),
     path("ajax/buscar-productos/", views.buscar_productos, name="buscar_productos"),
+    path("ventas/<int:venta_id>/imprimir/", views.imprimir_venta, name="venta_print"),
 ]
