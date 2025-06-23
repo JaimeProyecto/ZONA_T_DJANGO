@@ -19,7 +19,8 @@ from django.utils.dateparse import parse_date
 
 from escpos.printer import Usb as EscposUsb
 
-from .decorators import es_vendedor
+from .decorators import es_vendedor, es_admin
+
 from .forms import ProductForm, ClienteForm, AbonoForm
 from .models import Cliente, Product, Venta, VentaItem, Abono
 
