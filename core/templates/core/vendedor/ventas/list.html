@@ -1,101 +1,76 @@
-{# core/templates/core/vendedor/ventas/list.html #}
 {% extends "core/base_dashboard.html" %}
 {% block title %}Mis Ventas{% endblock %}
 {% load miles %}
 
 {% block content %}
-  <div class="flex justify-between items-center mb-6">
-    <h2 class="text-2xl font-bold text-green-400">📦 Mis Ventas</h2>
-    <a href="{% url 'venta_create' %}"
-       class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold">
-      ➕ Registrar Venta
-    </a>
+<div class="flex justify-between items-center mb-6">
+  <h2 class="text-2xl font-bold text-green-400">📦 Mis Ventas</h2>
+  <a href="{% url 'venta_create' %}"
+     class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold">
+    ➕ Registrar Venta
+  </a>
+</div>
+
+<form method="get" class="flex space-x-2 mb-4">
+  <input type="text" name="q" placeholder="Buscar cliente o factura..."
+         value="{{ query }}"
+         class="px-3 py-2 rounded bg-gray-700 text-white flex-1"/>
+  <input type="date" name="fecha_inicio" value="{{ fecha_inicio }}"
+         class="px-3 py-2 rounded bg-gray-700 text-white"/>
+  <input type="date" name="fecha_fin"    value="{{ fecha_fin }}"
+         class="px-3 py-2 rounded bg-gray-700 text-white"/>
+  <button type="submit"
+          class="bg-green-500 hover:bg-green-600 px-4 py-2 rounded font-bold text-black">
+    🔍 Buscar
+  </button>
+</form>
+
+<table class="w-full bg-gray-900 rounded overflow-hidden text-white text-sm">
+  <thead class="bg-gray-800">
+    <tr>
+      <th class="px-4 py-2"># Factura</th>
+      <th class="px-4 py-2">Cliente</th>
+      <th class="px-4 py-2">Tipo de Pago</th>
+      <th class="px-4 py-2 text-right">Total Venta</th>
+      <th class="px-4 py-2">Fecha</th>
+      <th class="px-4 py-2">Estado</th>
+      <th class="px-4 py-2">Acciones</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for venta in ventas %}
+    <tr class="border-t border-gray-700 hover:bg-gray-800">
+      <td class="px-4 py-2 font-mono text-blue-400">
+        <a href="{% url 'venta_vendedor_detail' venta.id %}">#{{ venta.numero_factura }}</a>
+      </td>
+      <td class="px-4 py-2">{{ venta.cliente.nombre }}</td>
+      <td class="px-4 py-2">{{ venta.tipo_pago|capfirst }}</td>
+      <td class="px-4 py-2 text-right">${{ venta.total|formato_miles }}</td>
+      <td class="px-4 py-2">{{ venta.created_at|date:"Y-m-d H:i" }}</td>
+      <td class="px-4 py-2">
+        <span class="{% if venta.estado == 'activa' %}text-green-400{% else %}text-red-400{% endif %}">
+          {{ venta.estado|capfirst }}
+        </span>
+      </td>
+      <td class="px-4 py-2 flex space-x-2">
+        <a href="{% url 'venta_vendedor_detail' venta.id %}" class="hover:underline">Ver</a>
+        <a href="{% url 'venta_ticket' venta.id %}" class="text-blue-400 hover:underline">🖨️ Imprimir</a>
+      </td>
+    </tr>
+    {% empty %}
+    <tr>
+      <td colspan="7" class="px-4 py-4 text-center text-gray-400">
+        No hay ventas registradas.
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="flex justify-end mt-4 text-white">
+  <div class="text-right">
+    <p class="font-semibold">🧾 Total Ventas:</p>
+    <p class="text-green-300 font-bold text-lg">${{ total_ventas|formato_miles }}</p>
   </div>
-
-  <form method="get" class="flex space-x-2 mb-4">
-    <input type="text" name="q" placeholder="Buscar cliente o factura..."
-           value="{{ query }}"
-           class="px-3 py-2 rounded bg-gray-700 text-white flex-1"/>
-    <input type="date" name="fecha_inicio" value="{{ fecha_inicio }}"
-           class="px-3 py-2 rounded bg-gray-700 text-white"/>
-    <input type="date" name="fecha_fin" value="{{ fecha_fin }}"
-           class="px-3 py-2 rounded bg-gray-700 text-white"/>
-    <button type="submit"
-            class="bg-green-500 hover:bg-green-600 px-4 py-2 rounded font-bold text-black">
-      🔍 Buscar
-    </button>
-  </form>
-
-  <table class="w-full bg-gray-900 rounded overflow-hidden text-white text-sm">
-    <thead class="bg-gray-800">
-      <tr>
-        <th class="px-4 py-2"># Factura</th>
-        <th class="px-4 py-2">Cliente</th>
-        <th class="px-4 py-2">Tipo de Pago</th>
-        <th class="px-4 py-2 text-right">Total Venta</th>
-        <th class="px-4 py-2">Fecha</th>
-        <th class="px-4 py-2">Estado</th>
-        <th class="px-4 py-2">Acciones</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for venta in ventas %}
-      <tr class="border-t border-gray-700 hover:bg-gray-800">
-        <td class="px-4 py-2 font-mono text-blue-400">
-          <a href="{% url 'venta_vendedor_detail' venta.id %}">
-            #{{ venta.numero_factura }}
-          </a>
-        </td>
-        <td class="px-4 py-2">{{ venta.cliente.nombre }}</td>
-        <td class="px-4 py-2">{{ venta.tipo_pago|capfirst }}</td>
-        <td class="px-4 py-2 text-right">
-          ${{ venta.total|formato_miles }}
-        </td>
-        <td class="px-4 py-2">
-          {{ venta.created_at|date:"Y-m-d H:i" }}
-        </td>
-        <td class="px-4 py-2">
-          <span class="{% if venta.estado == 'activa' %}text-green-400{% else %}text-red-400{% endif %}">
-            {{ venta.estado|capfirst }}
-          </span>
-        </td>
-        <td class="px-4 py-2 flex space-x-2">
-          <a href="{% url 'venta_vendedor_detail' venta.id %}" class="hover:underline">Ver</a>
-          <button
-            type="button"
-            class="text-blue-400 hover:underline imprimir-btn"
-            data-url="{% url 'venta_ticket' venta.id %}"
-          >🖨️ Imprimir</button>
-        </td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="7" class="px-4 py-4 text-center text-gray-400">
-          No hay ventas registradas.
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-
-  <div class="flex justify-end mt-4 text-white">
-    <div class="text-right">
-      <p class="font-semibold">🧾 Total Ventas:</p>
-      <p class="text-green-300 font-bold text-lg">
-        ${{ total_ventas|formato_miles }}
-      </p>
-    </div>
-  </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-  document.addEventListener('DOMContentLoaded', function(){
-    document.querySelectorAll('.imprimir-btn')
-      .forEach(btn => btn.addEventListener('click', () => {
-        const url = btn.getAttribute('data-url');
-        window.open(url, '_blank', 'noopener');
-      }));
-  });
-</script>
+</div>
 {% endblock %}
