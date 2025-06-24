@@ -7,25 +7,27 @@
   <title>Tirilla Venta {{ venta.numero_factura }}</title>
 
   <style>
-    @page { size: 80mm auto; margin: 4mm; }
+    /* Papel de 80 mm de ancho */
+    @page {
+      size: 80mm auto;
+      margin: 4mm;
+    }
     body {
       width: 80mm;
+      margin: 0;
+      padding: 0;
       font-family: monospace;
-      font-size: 11px;
-      margin: 0; padding: 0;
+      font-size: 12px;
     }
     .center { text-align: center; }
+    .logo   { width: 20mm; margin: 4px auto; display: block; }
     .separator { border-top: 1px dashed #000; margin: 4px 0; }
     .field { margin: 1px 0; }
     .label { display: inline-block; width: 40%; }
-    .value { display: inline-block; width: 55%; border-bottom: 1px dotted #000; }
-    table { width: 100%; border-collapse: collapse; font-size: 11px; }
+    table { width: 100%; border-collapse: collapse; }
     th, td { padding: 2px 0; }
     th { border-bottom: 1px solid #000; }
-    td { vertical-align: top; }
     .right { text-align: right; }
-    /* Ajusta el tamaño del logo */
-    .logo { width: 40mm; margin: 0 auto 4px; }
   </style>
 
   <script>
@@ -35,21 +37,32 @@
 </head>
 <body>
 
+  <img src="{% static 'core/img/logo.png' %}" class="logo" alt="Logo ZONA T">
   <div class="center"><strong>ZONA T</strong></div>
-  <div class="center">
-    <img src="{% static 'core/img/logo.png' %}" class="logo" alt="Logo ZONA T">
+  
+  <div class="separator"></div>
+
+  <!-- Empresa -->
+  <div class="field center">
+    <span class="label">NIT:</span>
+    <span class="value">1035770226-9</span>
   </div>
+  <div class="field center">
+    <span class="label">Dirección:</span>
+    <span class="value">Cra 20 22 02 centro</span>
+  </div>
+  <div class="field center">
+    <span class="label">Contacto:</span>
+    <span class="value">3135206736</span>
+  </div>
+  <div class="field center">
+    <span class="label">Ciudad:</span>
+    <span class="value">Sincelejo / Sucre</span>
+  </div>
+
   <div class="separator"></div>
 
-  <!-- Datos de la empresa -->
-  <div class="field"><span class="label">NIT:</span>        <span class="value">1035770226-9</span></div>
-  <div class="field"><span class="label">Dirección:</span> <span class="value">Cra 20 22 02 centro</span></div>
-  <div class="field"><span class="label">Contacto:</span>   <span class="value">3135206736</span></div>
-  <div class="field"><span class="label">Ciudad:</span>     <span class="value">Sincelejo / Sucre</span></div>
-
-  <div class="separator"></div>
-
-  <!-- Datos del cliente -->
+  <!-- Cliente -->
   <div class="field"><strong>Cliente.</strong></div>
   <div class="field"><span class="label">Nombre:</span>    <span class="value">{{ venta.cliente.nombre }}</span></div>
   <div class="field"><span class="label">Teléfono:</span>  <span class="value">{{ venta.cliente.telefono }}</span></div>
@@ -57,14 +70,14 @@
 
   <div class="separator"></div>
 
-  <!-- Datos de la venta -->
-  <div class="field"><span class="label">Fecha de compra:</span> <span class="value">{{ venta.created_at|date:"d/m/Y H:i" }}</span></div>
-  <div class="field"><span class="label">Factura:</span>         <span class="value">#{{ venta.numero_factura }}</span></div>
-  <div class="field"><span class="label">Método de pago:</span> <span class="value">{{ venta.tipo_pago|capfirst }}</span></div>
+  <!-- Venta -->
+  <div class="field"><span class="label">Fecha:</span>       <span class="value">{{ venta.created_at|date:"d/m/Y H:i" }}</span></div>
+  <div class="field"><span class="label">Factura:</span>     <span class="value">#{{ venta.numero_factura }}</span></div>
+  <div class="field"><span class="label">Método pago:</span><span class="value">{{ venta.tipo_pago|capfirst }}</span></div>
 
   <div class="separator"></div>
 
-  <!-- Tabla de items -->
+  <!-- Items -->
   <table>
     <thead>
       <tr>
@@ -80,7 +93,7 @@
         <td>{{ item.producto.reference|slice:":6" }}</td>
         <td>{{ item.producto.description|slice:":12" }}</td>
         <td class="right">{{ item.cantidad }}</td>
-        <td class="right">{{ item.precio|floatformat:2 }}</td>
+        <td class="right">{{ item.precio|formato_miles }}</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -91,7 +104,7 @@
   <!-- Total -->
   <div class="field">
     <span class="label">TOTAL:</span>
-    <span class="value right">{{ venta.total|floatformat:2 }}</span>
+    <span class="value right">{{ venta.total|formato_miles }}</span>
   </div>
 
 </body>

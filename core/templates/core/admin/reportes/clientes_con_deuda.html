@@ -29,7 +29,7 @@
           <td class="p-3">{{ cliente.nombre }}</td>
           <td class="p-3">{{ cliente.telefono }}</td>
           <td class="p-3">{{ cliente.ciudad }}</td>
-          <td class="p-3 text-red-400 font-semibold">${{ cliente.deuda_total|floatformat:0 }}</td>
+          <td class="p-3 text-red-400 font-semibold">${{ cliente.deuda_total|formato_miles0 }}</td>
         </tr>
       {% empty %}
         <tr>
