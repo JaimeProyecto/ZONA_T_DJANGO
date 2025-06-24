@@ -20,30 +20,77 @@
       font-family: monospace;
       font-size: 12px;
     }
+
+    /* Centrado general */
     .center { text-align: center; }
-    .logo   { width: 20mm; margin: 4px auto; display: block; }
-    .separator { border-top: 1px dashed #000; margin: 4px 0; }
-    .field { margin: 1px 0; }
-    .label { display: inline-block; width: 40%; }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 2px 0; }
-    th { border-bottom: 1px solid #000; }
-    .right { text-align: right; }
+
+    /* Logo */
+    .logo {
+      width: 20mm;
+      margin: 4px auto;
+      display: block;
+    }
+
+    /* Separadores */
+    .separator {
+      border-top: 1px dashed #000;
+      margin: 4px 0;
+    }
+
+    /* Campos */
+    .field {
+      margin: 1px 0;
+    }
+    /* Etiqueta y valor por defecto */
+    .label {
+      display: inline-block;
+      width: 40%;
+      vertical-align: top;
+    }
+    .value {
+      display: inline-block;
+      width: 55%;
+      vertical-align: top;
+    }
+
+    /* Sobrescribir para el bloque centrado de empresa */
+    .field.center .label,
+    .field.center .value {
+      display: inline-block;
+      width: auto;
+    }
+
+    /* Tabla de items */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 2px 0;
+    }
+    th {
+      border-bottom: 1px solid #000;
+    }
+    .right {
+      text-align: right;
+    }
   </style>
 
   <script>
-    window.onload = () => window.print();
-    window.onafterprint = () => window.close();
+    window.onload = function() {
+      window.print();
+      window.close();
+    };
   </script>
 </head>
 <body>
 
+  {# Logo y título #}
   <img src="{% static 'core/img/logo.png' %}" class="logo" alt="Logo ZONA T">
   <div class="center"><strong>ZONA T</strong></div>
-  
   <div class="separator"></div>
 
-  <!-- Empresa -->
+  {# Datos de la empresa centrados #}
   <div class="field center">
     <span class="label">NIT:</span>
     <span class="value">1035770226-9</span>
@@ -60,25 +107,40 @@
     <span class="label">Ciudad:</span>
     <span class="value">Sincelejo / Sucre</span>
   </div>
-
   <div class="separator"></div>
 
-  <!-- Cliente -->
+  {# Datos del cliente #}
   <div class="field"><strong>Cliente.</strong></div>
-  <div class="field"><span class="label">Nombre:</span>    <span class="value">{{ venta.cliente.nombre }}</span></div>
-  <div class="field"><span class="label">Teléfono:</span>  <span class="value">{{ venta.cliente.telefono }}</span></div>
-  <div class="field"><span class="label">Dirección:</span> <span class="value">{{ venta.cliente.direccion }}</span></div>
-
+  <div class="field">
+    <span class="label">Nombre:</span>
+    <span class="value">{{ venta.cliente.nombre }}</span>
+  </div>
+  <div class="field">
+    <span class="label">Teléfono:</span>
+    <span class="value">{{ venta.cliente.telefono }}</span>
+  </div>
+  <div class="field">
+    <span class="label">Dirección:</span>
+    <span class="value">{{ venta.cliente.direccion }}</span>
+  </div>
   <div class="separator"></div>
 
-  <!-- Venta -->
-  <div class="field"><span class="label">Fecha:</span>       <span class="value">{{ venta.created_at|date:"d/m/Y H:i" }}</span></div>
-  <div class="field"><span class="label">Factura:</span>     <span class="value">#{{ venta.numero_factura }}</span></div>
-  <div class="field"><span class="label">Método pago:</span><span class="value">{{ venta.tipo_pago|capfirst }}</span></div>
-
+  {# Detalles de la venta #}
+  <div class="field">
+    <span class="label">Fecha:</span>
+    <span class="value">{{ venta.created_at|date:"d/m/Y H:i" }}</span>
+  </div>
+  <div class="field">
+    <span class="label">Factura:</span>
+    <span class="value">#{{ venta.numero_factura }}</span>
+  </div>
+  <div class="field">
+    <span class="label">Método pago:</span>
+    <span class="value">{{ venta.tipo_pago|capfirst }}</span>
+  </div>
   <div class="separator"></div>
 
-  <!-- Items -->
+  {# Tabla de ítems #}
   <table>
     <thead>
       <tr>
@@ -99,10 +161,9 @@
       {% endfor %}
     </tbody>
   </table>
-
   <div class="separator"></div>
 
-  <!-- Total -->
+  {# Total #}
   <div class="field">
     <span class="label">TOTAL:</span>
     <span class="value right">{{ venta.total|formato_miles }}</span>

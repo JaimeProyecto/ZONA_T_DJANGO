@@ -52,7 +52,14 @@
           {{ venta.estado|capfirst }}
         </span>
       </td>
-      <td class="px-4 py-2"><a href="{% url 'venta_admin_detail' venta.id %}">Ver</a></td>
+      <td class="px-4 py-2 flex space-x-2">
+        <a href="{% url 'venta_admin_detail' venta.id %}" class="hover:underline">Ver</a>
+          <button
+            type="button"
+            class="text-blue-400 hover:underline imprimir-btn"
+            data-url="{% url 'venta_ticket' venta.id %}"
+          >🖨️ Imprimir</button>
+      </td>
     </tr>
     {% empty %}
     <tr>
@@ -74,4 +81,16 @@
     <p class="text-yellow-300 font-bold text-lg">${{ total_ganancias|formato_miles }}</p>
   </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('.imprimir-btn')
+      .forEach(btn => btn.addEventListener('click', () => {
+        const url = btn.getAttribute('data-url');
+        window.open(url, '_blank', 'noopener');
+      }));
+  });
+</script>
 {% endblock %}
