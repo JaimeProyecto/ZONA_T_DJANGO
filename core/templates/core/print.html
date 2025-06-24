@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Tirilla Venta {{ venta.numero_factura }}</title>
+  <style>
+    /* Fuerza el tamaño de ticket: 80 mm de ancho */
+    @page {
+      size: 80mm auto;
+      margin: 4mm;
+    }
+    body {
+      width: 80mm;
+      font-family: monospace;
+      font-size: 12px;
+      margin: 0;
+      padding: 0;
+    }
+    .center { text-align: center; }
+    .separator { border-top: 1px dashed #000; margin: 4px 0; }
+    .items th, .items td { padding: 2px 0; }
+  </style>
+  <script>
+    // Al cargar, disparar el diálogo de impresión
+    window.onload = () => {
+      window.print();
+      // opcional: window.close();
+    };
+  </script>
+</head>
+<body>
+  <div class="center"><strong>ZONA T</strong></div>
+  <div>{{ venta.cliente.nombre }}</div>
+  <div>{{ venta.cliente.direccion }}</div>
+  <div>{{ venta.cliente.telefono }}</div>
+  <div>Venta N° {{ venta.numero_factura }}</div>
+  <div>Método: {{ venta.tipo_pago|capfirst }}</div>
+  <div>Fecha: {{ venta.created_at|date:"d/m/Y H:i" }}</div>
+  <div class="separator"></div>
+
+  <table class="items" width="100%">
+    <thead>
+      <tr>
+        <th align="left">REF</th>
+        <th align="left">DESC</th>
+        <th align="right">CANT</th>
+        <th align="right">VALOR</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in venta.items.all %}
+      <tr>
+        <td>{{ item.producto.reference|slice:":10" }}</td>
+        <td>{{ item.producto.description|slice:":10" }}</td>
+        <td align="right">{{ item.cantidad }}</td>
+        <td align="right">{{ item.precio|floatformat:2 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="separator"></div>
+  <div style="text-align:right;"><strong>TOTAL: {{ venta.total|floatformat:2 }}</strong></div>
+</body>
+</html>

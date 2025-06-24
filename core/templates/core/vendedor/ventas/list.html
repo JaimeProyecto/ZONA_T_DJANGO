@@ -54,7 +54,7 @@
       </td>
       <td class="px-4 py-2 flex space-x-2">
         <a href="{% url 'venta_vendedor_detail' venta.id %}" class="hover:underline">Ver</a>
-        <a href="{% url 'venta_print' venta.id %}" class="text-blue-400 hover:underline">🖨️ Imprimir</a>
+        <a href="{% url 'venta_ticket' venta.id %}" class="text-blue-400 hover:underline">🖨️ Imprimir</a>
       </td>
     </tr>
     {% empty %}

@@ -1,6 +1,12 @@
+"""URLs de la app core: ventas, productos, clientes, etc."""
+
 from django.urls import path
 from . import views
-from .views import crear_venta, detalle_venta, venta_delete
+from .views import (
+    crear_venta,
+    venta_delete,
+    ticket_venta,
+)
 from django.shortcuts import redirect
 
 
@@ -116,4 +122,5 @@ urlpatterns = [
     path("ajax/buscar-clientes/", views.buscar_clientes, name="buscar_clientes"),
     path("ajax/buscar-productos/", views.buscar_productos, name="buscar_productos"),
     path("ventas/<int:venta_id>/imprimir/", views.imprimir_venta, name="venta_print"),
+    path("ventas/<int:venta_id>/ticket/", ticket_venta, name="venta_ticket"),
 ]

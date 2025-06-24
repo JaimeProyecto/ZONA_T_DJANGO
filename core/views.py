@@ -297,11 +297,11 @@ def buscar_productos(request):
 
 
 # ventas
+# core/views.py
 def _abrir_impresora_usb():
     """
-    Intenta abrir cualquier impresora USB de clase impresora (bDeviceClass == 7).
-    Si PyUSB no está disponible o no se encuentra ninguna impresora,
-    hace fallback a los IDs configurados en settings.
+    Intenta detectar cualquier impresora USB de clase impresora (bDeviceClass == 7).
+    Si no hay PyUSB o no encuentra ninguna, cae al fallback definido en settings.
     """
     try:
         import usb.core
@@ -319,7 +319,7 @@ def _abrir_impresora_usb():
             except Exception:
                 continue
 
-    # Fallback a IDs definidos en settings.py
+    # Fallback a los IDs en settings
     return EscposUsb(
         settings.ESC_POS_USB_VENDOR,
         settings.ESC_POS_USB_PRODUCT,
@@ -330,100 +330,88 @@ def _abrir_impresora_usb():
 @login_required
 @user_passes_test(es_vendedor, login_url="login")
 def crear_venta(request):
-    clientes = Cliente.objects.all()
-    productos = Product.objects.all().values("id", "reference", "description")
+    if request.method == "GET":
+        return render(
+            request,
+            "core/vendedor/ventas/create.html",
+            {
+                "clientes": Cliente.objects.all(),
+                "productos": Product.objects.values("id", "reference", "description"),
+            },
+        )
 
-    if request.method == "POST":
-        data = request.POST
-        cliente_id = data.get("cliente")
-        tipo_pago = data.get("tipo_pago", "contado")
-        descuento_raw = data.get("descuento", "0").replace(".", "")
-        descuento_mil = Decimal(descuento_raw)
-        productos_json = json.loads(data.get("productos_data", "[]"))
+    data = request.POST
+    cliente_id = data.get("cliente")
+    productos_json = json.loads(data.get("productos_data", "[]"))
+    descuento = Decimal(data.get("descuento", "0").replace(".", ""))
+    tipo_pago = data.get("tipo_pago", "contado")
 
-        if not cliente_id or not productos_json:
-            messages.error(
-                request, "Debes seleccionar un cliente y al menos un producto."
+    if not cliente_id or not productos_json:
+        messages.error(request, "Debes seleccionar un cliente y al menos un producto.")
+        return redirect("venta_create")
+
+    try:
+        with transaction.atomic():
+            pref = {"credito": "FC-", "transferencia": "FT-", "garantia": "FG-"}.get(
+                tipo_pago, "FV-"
             )
-            return redirect("venta_create")
+            nro = Venta.objects.filter(tipo_pago=tipo_pago).count() + 1
+            venta = Venta.objects.create(
+                cliente_id=cliente_id,
+                numero_factura=f"{pref}{nro}",
+                tipo_pago=tipo_pago,
+                usuario=request.user,
+            )
 
-        try:
-            with transaction.atomic():
-                prefijos = {"credito": "FC-", "transferencia": "FT-", "garantia": "FG-"}
-                pref = prefijos.get(tipo_pago, "FV-")
+            bruto = Decimal(0)
+            for itm in productos_json:
+                prod = Product.objects.get(pk=itm["producto_id"])
+                cant = int(itm["cantidad"])
+                precio = Decimal(str(itm.get("precio", "0")))
 
-                nro = Venta.objects.filter(tipo_pago=tipo_pago).count() + 1
-                fac = f"{pref}{nro}"
+                if prod.stock < cant:
+                    raise ValueError(f"Stock insuficiente {prod.reference}")
 
-                venta = Venta.objects.create(
-                    cliente_id=cliente_id,
-                    numero_factura=fac,
-                    tipo_pago=tipo_pago,
-                    usuario=request.user,
+                sub = precio * cant
+                VentaItem.objects.create(
+                    venta=venta, producto=prod, cantidad=cant, precio=precio
                 )
+                prod.stock -= cant
+                prod.save()
+                bruto += sub
 
-                bruto = Decimal("0")
-                for itm in productos_json:
-                    prod = Product.objects.get(pk=itm["producto_id"])
-                    cant = int(itm["cantidad"])
-                    precio = Decimal(str(itm.get("precio", "0")))
-                    if prod.stock < cant:
-                        raise ValueError(f"Stock insuficiente {prod.reference}")
+            venta.total = max(bruto - descuento, Decimal(0))
+            venta.save()
 
-                    sub = precio * cant
-                    VentaItem.objects.create(
-                        venta=venta,
-                        producto=prod,
-                        cantidad=cant,
-                        precio=precio,
-                    )
-                    prod.stock -= cant
-                    prod.save()
-                    bruto += sub
+        messages.success(request, f"✅ Venta #{venta.numero_factura} registrada.")
+        return redirect("venta_vendedor_list")
 
-                neto = bruto - descuento_mil
-                venta.total = neto if neto > 0 else Decimal("0")
-                venta.save()
-
-                messages.success(
-                    request, f"✅ Venta #{venta.numero_factura} registrada."
-                )
-                return redirect("venta_vendedor_list")
-
-        except Exception as e:
-            messages.error(request, f"❌ Error: {e}")
-            return redirect("venta_create")
-
-    return render(
-        request,
-        "core/vendedor/ventas/create.html",
-        {"clientes": clientes, "productos": list(productos)},
-    )
+    except Exception as e:
+        messages.error(request, f"❌ Error al registrar la venta: {e}")
+        return redirect("venta_create")
 
 
 @login_required
 @user_passes_test(es_vendedor, login_url="login")
 def imprimir_venta(request, venta_id):
-    print(f">>> [DEBUG] imprimir_venta llamada para venta {venta_id}")
+    """
+    Vista legacy de impresión directa via USB.
+    La dejamos por compatibilidad, pero recomendamos usar `ticket_venta`.
+    """
     venta = get_object_or_404(Venta, pk=venta_id)
     try:
         p = _abrir_impresora_usb()
-
         p.set(align="center")
         p.text("ZONA T\n")
         p.set(align="left")
-
-        p.text(f"{venta.cliente.nombre}\n")
-        p.text(f"{venta.cliente.direccion}\n")
-        p.text(f"{venta.cliente.telefono}\n")
-
-        p.text(f"Venta N° {venta.numero_factura}\n")
-        p.text(f"Método de pago: {venta.tipo_pago.capitalize()}\n\n")
         p.text(
-            f"Fecha: {timezone.localtime(venta.created_at).strftime('%d/%m/%Y %H:%M')}\n"
+            f"{venta.cliente.nombre}\n{venta.cliente.direccion}\n{venta.cliente.telefono}\n"
         )
+        p.text(
+            f"Venta N° {venta.numero_factura}\nMétodo: {venta.tipo_pago.capitalize()}\n"
+        )
+        p.text(f"Fecha: {timezone.localtime(venta.created_at):%d/%m/%Y %H:%M}\n")
         p.text("-" * 32 + "\n")
-
         p.text("REF   DESC       CANT  VALOR\n")
         p.text("-" * 32 + "\n")
         for item in venta.items.all():
@@ -431,14 +419,25 @@ def imprimir_venta(request, venta_id):
             desc = item.producto.description[:10]
             p.text(f"{ref:10s} {desc:10s} {item.cantidad:3d} {item.precio:7.2f}\n")
         p.text("-" * 32 + "\n")
-
         p.text(f"TOTAL: {venta.total:.2f}\n")
         p.cut()
-
         messages.success(request, "🖨️ Tirilla enviada a la impresora.")
     except Exception as e:
-        messages.error(request, f"❗ Error al imprimir: {e}")
+        messages.warning(request, f"❗ Venta registrada, pero NO se imprimió: {e}")
     return redirect("venta_vendedor_list")
+
+
+@login_required
+@user_passes_test(
+    lambda u: u.is_authenticated and (es_vendedor(u) or es_admin(u)), login_url="login"
+)
+def ticket_venta(request, venta_id):
+    """
+    Genera un ticket HTML con @page size:80mm y window.print(),
+    reutilizable por vendedor y administrador.
+    """
+    venta = get_object_or_404(Venta, pk=venta_id)
+    return render(request, "core/ventas/print.html", {"venta": venta})
 
 
 @login_required
