@@ -437,7 +437,7 @@ def ticket_venta(request, venta_id):
     reutilizable por vendedor y administrador.
     """
     venta = get_object_or_404(Venta, pk=venta_id)
-    return render(request, "core/ventas/print.html", {"venta": venta})
+    return render(request, "core/print.html", {"venta": venta})
 
 
 @login_required
