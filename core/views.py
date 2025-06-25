@@ -57,37 +57,34 @@ def redirect_by_role(request):
 def admin_dashboard(request):
     hoy = date.today()
 
-    # Clientes por vendedor
+    # Clientes por vendedor (ya lo tienes)
     clientes_por_vendedor = Cliente.objects.values("creado_por__username").annotate(
         total=Count("id")
     )
 
-    # Ventas últimos 7 días
-    fechas_semana = [hoy - timedelta(days=i) for i in range(6, -1, -1)]
-    ventas_semana_qs = (
+    # 1️⃣ Ventas últimos 7 días
+    fechas = [hoy - timedelta(days=i) for i in range(6, -1, -1)]
+    qs_semana = (
         Venta.objects.filter(fecha__date__gte=hoy - timedelta(days=6), estado="activa")
         .annotate(dia=TruncDate("fecha"))
         .values("dia")
         .annotate(total_dia=Sum("total"))
         .order_by("dia")
     )
-    ventas_semana_map = {
-        v["dia"].strftime("%Y-%m-%d"): v["total_dia"] for v in ventas_semana_qs
-    }
-    serie_ventas = [
-        ventas_semana_map.get(d.strftime("%Y-%m-%d"), 0) for d in fechas_semana
-    ]
+    mapa = {v["dia"].strftime("%d/%m"): v["total_dia"] for v in qs_semana}
+    serie_ventas = [mapa.get(d.strftime("%d/%m"), 0) for d in fechas]
+    fechas_semana = [d.strftime("%d/%m") for d in fechas]
 
-    # Tipos de pago últimos 30 días
-    pagos_qs = (
+    # 2️⃣ Tipos de pago últimos 30 días
+    qs_pagos = (
         Venta.objects.filter(fecha__date__gte=hoy - timedelta(days=30))
         .values("tipo_pago")
         .annotate(cantidad=Count("id"))
     )
-    labels_pagos = [p["tipo_pago"].capitalize() for p in pagos_qs]
-    datos_pagos = [p["cantidad"] for p in pagos_qs]
+    labels_pagos = [p["tipo_pago"].capitalize() for p in qs_pagos]
+    datos_pagos = [p["cantidad"] for p in qs_pagos]
 
-    # Ingresos del mes
+    # 3️⃣ Ingresos mes actual
     ingresos_mes = (
         Venta.objects.filter(
             fecha__year=hoy.year, fecha__month=hoy.month, estado="activa"
@@ -95,7 +92,7 @@ def admin_dashboard(request):
         or 0
     )
 
-    # Productos bajo stock
+    # 4️⃣ Stock bajo
     bajo_stock = Product.objects.filter(stock__lte=5).count()
 
     return render(
@@ -103,7 +100,7 @@ def admin_dashboard(request):
         "core/admin/admin_dashboard.html",
         {
             "clientes_por_vendedor": clientes_por_vendedor,
-            "fechas_semana": [d.strftime("%d/%m") for d in fechas_semana],
+            "fechas_semana": fechas_semana,
             "serie_ventas": serie_ventas,
             "labels_pagos": labels_pagos,
             "datos_pagos": datos_pagos,
