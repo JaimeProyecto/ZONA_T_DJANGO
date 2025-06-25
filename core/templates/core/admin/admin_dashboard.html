@@ -2,8 +2,7 @@
 {% extends 'core/base_dashboard.html' %}
 {% block title %}Panel de Control – ZONA T{% endblock %}
 {% block header %}Panel de Control{% endblock %}
-{% load miles %}
-{% load json_script %}
+{% load miles static %}
 
 {% block content %}
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -19,15 +18,11 @@
       {% endfor %}
     </ul>
   </div>
-
   <!-- KPI: Ingresos Mensuales -->
   <div class="bg-zinc-800 p-6 rounded-2xl shadow-lg flex flex-col">
     <span class="text-sm text-zinc-400">📈 Ingresos Mes</span>
-    <span class="mt-2 text-3xl font-bold text-green-300">
-      ${{ ingresos_mes|formato_miles }}
-    </span>
+    <span class="mt-2 text-3xl font-bold text-green-300">${{ ingresos_mes|formato_miles }}</span>
   </div>
-
   <!-- KPI: Stock Bajo -->
   <div class="bg-zinc-800 p-6 rounded-2xl shadow-lg flex flex-col">
     <span class="text-sm text-zinc-400">🛒 Stock Bajo (≤5)</span>
@@ -41,7 +36,6 @@
     <h3 class="text-lg font-semibold text-white mb-4">Ventas Última Semana</h3>
     <canvas id="chartVentasSemana"></canvas>
   </div>
-
   <!-- Donut Tipos de Pago -->
   <div class="bg-zinc-800 p-6 rounded-2xl shadow-lg">
     <h3 class="text-lg font-semibold text-white mb-4">Tipos de Pago (últ. 30 días)</h3>
@@ -49,56 +43,42 @@
   </div>
 </div>
 
-{# 1) Inyectamos los JSON seguros con json_script #}
-{{ fechas_semana|json_script:"ventas-semana-labels" }}
-{{ serie_ventas|json_script:"ventas-semana-values" }}
-{{ labels_pagos|json_script:"tipos-pago-labels" }}
-{{ datos_pagos|json_script:"tipos-pago-values" }}
+{# Inyección directa de arrays JS con |safe #}
+<script>
+  const fechasSemana = {{ fechas_semana|safe }};
+  const serieVentas   = {{ serie_ventas|safe }};
+  const labelsPagos   = {{ labels_pagos|safe }};
+  const datosPagos    = {{ datos_pagos|safe }};
+</script>
 
-{# 2) Incluir Chart.js y leer esos JSON desde JS #}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  // Datos Ventas Semanales
-  const labelsSemana = JSON.parse(document.getElementById('ventas-semana-labels').textContent);
-  const datosSemana  = JSON.parse(document.getElementById('ventas-semana-values').textContent);
-
+  // Ventas semanales
   new Chart(
     document.getElementById('chartVentasSemana').getContext('2d'),
     {
       type: 'bar',
       data: {
-        labels: labelsSemana,
+        labels: fechasSemana,
         datasets: [{
           label: 'Ventas',
-          data: datosSemana,
+          data: serieVentas,
           backgroundColor: 'rgba(34,197,94,0.7)'
         }]
       },
-      options: {
-        scales: {
-          y: { beginAtZero: true }
-        }
-      }
+      options: { scales: { y: { beginAtZero: true } } }
     }
   );
-
-  // Datos Tipos de Pago
-  const labelsPago = JSON.parse(document.getElementById('tipos-pago-labels').textContent);
-  const datosPago  = JSON.parse(document.getElementById('tipos-pago-values').textContent);
-
+  // Donut de tipos de pago
   new Chart(
     document.getElementById('chartTiposPago').getContext('2d'),
     {
       type: 'doughnut',
       data: {
-        labels: labelsPago,
-        datasets: [{ data: datosPago }]
+        labels: labelsPagos,
+        datasets: [{ data: datosPagos }]
       },
-      options: {
-        plugins: {
-          legend: { position: 'bottom' }
-        }
-      }
+      options: { plugins: { legend: { position: 'bottom' } } }
     }
   );
 </script>
