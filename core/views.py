@@ -339,8 +339,8 @@ def crear_venta(request):
 
     try:
         with transaction.atomic():
-            pref = {"credito": "FC-", "transferencia": "FT-", "garantia": "FG-"}.get(
-                tipo_pago, "FV-"
+            pref = {"credito": "FC1-", "transferencia": "FT1-", "garantia": "FG1-"}.get(
+                tipo_pago, "FV1-"
             )
             nro = Venta.objects.filter(tipo_pago=tipo_pago).count() + 1
             venta = Venta.objects.create(
@@ -445,6 +445,8 @@ def venta_admin_list(request):
         qs = qs.filter(
             Q(cliente__nombre__icontains=query) | Q(numero_factura__icontains=query)
         )
+    if tipo_pago:
+        qs = qs.filter(tipo_pago=tipo_pago)
     if fecha_inicio:
         qs = qs.filter(fecha__date__gte=fecha_inicio)
     if fecha_fin:
@@ -468,12 +470,15 @@ def venta_admin_list(request):
     total_ventas = sum(v.total for v in ventas)
     total_ganancias = sum(v.ganancia for v in ventas)
 
+    tipo_pago = [("", "Todos")] + list(Venta.TIPO_PAGO)
+
     return render(
         request,
         "core/admin/ventas/list.html",
         {
             "ventas": ventas,
             "query": query,
+            "tipo_pago": tipo_pago,
             "fecha_inicio": fecha_inicio and fecha_inicio.strftime("%Y-%m-%d"),
             "fecha_fin": fecha_fin and fecha_fin.strftime("%Y-%m-%d"),
             "total_ventas": total_ventas,

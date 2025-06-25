@@ -15,6 +15,11 @@
          class="px-3 py-2 rounded bg-gray-700 text-white"/>
   <input type="date" name="fecha_fin"    value="{{ fecha_fin }}"
          class="px-3 py-2 rounded bg-gray-700 text-white"/>
+  <select name="tipo_pago" class="px-3 py-2 rounded bg-gray-700 text-white">
+    {% for code, label in tipos_pago %}
+      <option value="{{ code }}" {% if code == tipo_pago %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
   <button type="submit"
           class="bg-green-500 hover:bg-green-600 px-4 py-2 rounded font-bold text-black">
     🔍 Buscar
