@@ -21,7 +21,7 @@
   <input type="text" name="q" placeholder="Buscar cliente o factura..." value="{{ query }}" class="px-3 py-2 rounded bg-gray-700 text-white flex-1"/>
 
   <select name="tipo_pago" class="px-3 py-2 rounded bg-gray-700 text-white">
-    {% for code, label in tipos_pago %}
+    {% for code, label in tipo_pago %}
       <option value="{{ code }}" {% if code == tipo_pago %}selected{% endif %}>{{ label }}</option>
     {% endfor %}
   </select>
