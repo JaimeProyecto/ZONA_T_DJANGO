@@ -431,19 +431,16 @@ def ticket_venta(request, venta_id):
 @login_required
 @user_passes_test(es_admin, login_url="login")
 def venta_admin_list(request):
-    # 1) Parámetros de filtro
     query = request.GET.get("q", "").strip()
     fecha_inicio = parse_date(request.GET.get("fecha_inicio", ""))
     fecha_fin = parse_date(request.GET.get("fecha_fin", ""))
 
-    # 2) Queryset base, ordenado por el campo `fecha`
     qs = (
         Venta.objects.select_related("cliente", "usuario")
         .prefetch_related("items__producto", "abonos__usuario")
         .order_by("-fecha")
     )
 
-    # 3) Aplicar filtros de búsqueda y rango de fechas
     if query:
         qs = qs.filter(
             Q(cliente__nombre__icontains=query) | Q(numero_factura__icontains=query)
@@ -453,13 +450,14 @@ def venta_admin_list(request):
     if fecha_fin:
         qs = qs.filter(fecha__date__lte=fecha_fin)
 
-    # 4) Calcular ganancia y último abono
     ventas = []
     for v in qs:
+        # Cálculo de ganancia
         v.ganancia = sum(
             (item.precio - item.producto.purchase_price) * item.cantidad
             for item in v.items.all()
         )
+        # Último abono
         ultimo = v.abonos.order_by("-fecha").first()
         v.ultimo_abono_monto = ultimo.monto if ultimo else None
         v.ultimo_abono_por = (
@@ -467,11 +465,9 @@ def venta_admin_list(request):
         )
         ventas.append(v)
 
-    # 5) Totales
     total_ventas = sum(v.total for v in ventas)
     total_ganancias = sum(v.ganancia for v in ventas)
 
-    # 6) Renderizar plantilla
     return render(
         request,
         "core/admin/ventas/list.html",
@@ -490,16 +486,20 @@ def venta_admin_list(request):
 @login_required
 @user_passes_test(es_vendedor, login_url="login")
 def venta_vendedor_list(request):
+    # 1. Parámetros de búsqueda y fecha
     query = request.GET.get("q", "").strip()
-    fecha_inicio = request.GET.get("fecha_inicio", "").strip()
-    fecha_fin = request.GET.get("fecha_fin", "").strip()
+    fecha_inicio = parse_date(request.GET.get("fecha_inicio", ""))
+    fecha_fin = parse_date(request.GET.get("fecha_fin", ""))
 
+    # 2. Queryset base
     qs = (
         Venta.objects.filter(usuario=request.user)
         .select_related("cliente")
-        .prefetch_related("abonos__usuario")
+        .prefetch_related("items__producto", "abonos__usuario")
         .order_by("-fecha")
     )
+
+    # 3. Filtros
     if query:
         qs = qs.filter(
             Q(cliente__nombre__icontains=query) | Q(numero_factura__icontains=query)
@@ -509,27 +509,37 @@ def venta_vendedor_list(request):
     if fecha_fin:
         qs = qs.filter(fecha__date__lte=fecha_fin)
 
+    # 4. Construcción de la lista con ganancia y último abono
     ventas = []
     for v in qs:
-        # último abono
+        # Ganancia = suma de (precio_venta – precio_compra) * cantidad
+        v.ganancia = sum(
+            (item.precio - item.producto.purchase_price) * item.cantidad
+            for item in v.items.all()
+        )
+        # Último abono
         ultimo = v.abonos.order_by("-fecha").first()
+        v.ultimo_abono_monto = ultimo.monto if ultimo else None
         v.ultimo_abono_por = (
             ultimo.usuario.username if (ultimo and ultimo.usuario) else None
         )
-        v.ultimo_abono_monto = ultimo.monto if ultimo else None
         ventas.append(v)
 
+    # 5. Totales acumulados
     total_ventas = sum(v.total for v in ventas)
+    total_ganancias = sum(v.ganancia for v in ventas)
 
+    # 6. Render
     return render(
         request,
         "core/vendedor/ventas/list.html",
         {
             "ventas": ventas,
             "query": query,
-            "fecha_inicio": fecha_inicio,
-            "fecha_fin": fecha_fin,
+            "fecha_inicio": fecha_inicio and fecha_inicio.strftime("%Y-%m-%d"),
+            "fecha_fin": fecha_fin and fecha_fin.strftime("%Y-%m-%d"),
             "total_ventas": total_ventas,
+            "total_ganancias": total_ganancias,
         },
     )
 
@@ -874,28 +884,36 @@ def exportar_ventas_excel_admin(request):
     return response
 
 
+@login_required
+@user_passes_test(es_admin, login_url="login")
 def exportar_clientes_deuda_excel(request):
+    # 1. Creamos el libro y hoja
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Clientes con Deuda"
 
-    # Cabeceras
-    ws.append(["Nombre", "Teléfono", "Ciudad", "Deuda ($)"])
+    # 2. Cabeceras
+    ws.append(["Nombre", "Teléfono", "Dirección", "Deuda ($)"])
 
-    clientes = Cliente.objects.all()
-
-    for cliente in clientes:
+    # 3. Recorremos clientes y calculamos deuda
+    for cliente in Cliente.objects.all():
         ventas = cliente.venta_set.filter(estado="activa", tipo_pago="credito")
         saldo_total = sum(venta.calcular_saldo_pendiente() for venta in ventas)
         if saldo_total > 0:
             ws.append(
-                [cliente.nombre, cliente.telefono, cliente.ciudad, float(saldo_total)]
+                [
+                    cliente.nombre,
+                    cliente.telefono,
+                    cliente.direccion,  # <— ahora usamos 'direccion'
+                    float(saldo_total),
+                ]
             )
 
+    # 4. Devolvemos el Excel al cliente
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    response["Content-Disposition"] = "attachment; filename=clientes_con_deuda.xlsx"
+    response["Content-Disposition"] = 'attachment; filename="clientes_con_deuda.xlsx"'
     wb.save(response)
     return response
 
