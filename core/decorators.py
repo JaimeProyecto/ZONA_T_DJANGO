@@ -1,17 +1,19 @@
 # core/decorators.py
 
-
-def es_vendedor(user):
-    """
-    Devuelve True si el usuario está autenticado y tiene el rol 'vendedor'.
-    Ajusta 'vendedor' al nombre exacto que uses en tu tabla de roles.
-    """
-    return user.is_authenticated and user.is_superuser.filter(name="vendedor").exists()
+from django.contrib.auth.models import Group
+from django.shortcuts import redirect
+from functools import wraps
 
 
 def es_admin(user):
     """
-    Devuelve True si el usuario está autenticado y tiene el rol 'admin'.
-    Ajusta 'admin' al nombre exacto que uses en tu tabla de roles.
+    True si autenticado y en el grupo 'admin'.
     """
-    return user.is_authenticated and user.is_superuser.filter(name="admin").exists()
+    return user.is_authenticated and user.groups.filter(name="admin").exists()
+
+
+def es_vendedor(user):
+    """
+    True si autenticado y en el grupo 'vendedor'.
+    """
+    return user.is_authenticated and user.groups.filter(name="vendedor").exists()
