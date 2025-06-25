@@ -1,3 +1,4 @@
+{# core/templates/core/vendedor/ventas/list.html #}
 {% extends "core/base_dashboard.html" %}
 {% block title %}Mis Ventas{% endblock %}
 {% load miles %}
@@ -5,32 +6,31 @@
 {% block content %}
 <div class="flex justify-between items-center mb-6">
   <h2 class="text-2xl font-bold text-green-400">📦 Mis Ventas</h2>
+  <div class="flex space-x-2">
+    <a href="{% url 'venta_create' %}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-bold">
+      ➕ Registrar Venta
+    </a>
+    <a href="{% url 'exportar_ventas_excel_vendedor' %}?q={{ query }}&tipo_pago={{ tipo_pago }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}"
+       class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded font-bold">
+      📤 Exportar a Excel
+    </a>
+  </div>
 </div>
 
 <form method="get" class="flex space-x-2 mb-4">
-  <input type="text" name="q" placeholder="Buscar cliente o factura..."
-         value="{{ query }}"
-         class="px-3 py-2 rounded bg-gray-700 text-white flex-1"/>
-  <input type="date" name="fecha_inicio" value="{{ fecha_inicio }}"
-         class="px-3 py-2 rounded bg-gray-700 text-white"/>
-  <input type="date" name="fecha_fin"    value="{{ fecha_fin }}"
-         class="px-3 py-2 rounded bg-gray-700 text-white"/>
+  <input type="text" name="q" placeholder="Buscar cliente o factura..." value="{{ query }}" class="px-3 py-2 rounded bg-gray-700 text-white flex-1"/>
+
   <select name="tipo_pago" class="px-3 py-2 rounded bg-gray-700 text-white">
     {% for code, label in tipos_pago %}
       <option value="{{ code }}" {% if code == tipo_pago %}selected{% endif %}>{{ label }}</option>
     {% endfor %}
   </select>
-  <button type="submit"
-          class="bg-green-500 hover:bg-green-600 px-4 py-2 rounded font-bold text-black">
+
+  <input type="date"   name="fecha_inicio" value="{{ fecha_inicio }}" class="px-3 py-2 rounded bg-gray-700 text-white"/>
+  <input type="date"   name="fecha_fin"    value="{{ fecha_fin }}"    class="px-3 py-2 rounded bg-gray-700 text-white"/>
+  <button type="submit" class="bg-green-500 hover:bg-green-600 px-4 py-2 rounded font-bold text-black">
     🔍 Buscar
   </button>
-<a
-  href="{% url 'exportar_ventas_excel_admin' %}?q={{ query }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}"
-  class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded font-bold"
->
-  📤 Exportar a Excel
-</a>
-
 </form>
 
 <table class="w-full bg-gray-900 rounded overflow-hidden text-white text-sm">
@@ -69,9 +69,7 @@
     </tr>
     {% empty %}
     <tr>
-      <td colspan="8" class="px-4 py-4 text-center text-gray-400">
-        No hay ventas registradas.
-      </td>
+      <td colspan="8" class="px-4 py-4 text-center text-gray-400">No hay ventas registradas.</td>
     </tr>
     {% endfor %}
   </tbody>

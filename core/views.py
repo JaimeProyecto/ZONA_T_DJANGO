@@ -432,6 +432,7 @@ def ticket_venta(request, venta_id):
 @user_passes_test(es_admin, login_url="login")
 def venta_admin_list(request):
     query = request.GET.get("q", "").strip()
+    tipo_pago = request.GET.get("tipo_pago", "")
     fecha_inicio = parse_date(request.GET.get("fecha_inicio", ""))
     fecha_fin = parse_date(request.GET.get("fecha_fin", ""))
 
@@ -470,7 +471,8 @@ def venta_admin_list(request):
     total_ventas = sum(v.total for v in ventas)
     total_ganancias = sum(v.ganancia for v in ventas)
 
-    tipo_pago = [("", "Todos")] + list(Venta.TIPO_PAGO)
+    # Opciones para el filtro de tipo de pago, tomadas del propio campo
+    tipo_pago = [("", "Todos")] + list(Venta._meta.get_field("tipo_pago").choices)
 
     return render(
         request,
