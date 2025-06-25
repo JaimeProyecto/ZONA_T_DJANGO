@@ -41,7 +41,6 @@
     .field {
       margin: 1px 0;
     }
-    /* Etiqueta y valor por defecto */
     .label {
       display: inline-block;
       width: 40%;
@@ -52,8 +51,6 @@
       width: 55%;
       vertical-align: top;
     }
-
-    /* Sobrescribir para el bloque centrado de empresa */
     .field.center .label,
     .field.center .value {
       display: inline-block;
@@ -63,6 +60,7 @@
     /* Tabla de items */
     table {
       width: 100%;
+      table-layout: fixed;
       border-collapse: collapse;
     }
     th, td {
@@ -70,6 +68,16 @@
     }
     th {
       border-bottom: 1px solid #000;
+    }
+
+    /* Columnas específicas */
+    .ref, .can, .val {
+      white-space: nowrap;
+    }
+    .desc {
+      width: 50%;
+      white-space: pre-wrap;
+      word-wrap: break-word;
     }
     .right {
       text-align: right;
@@ -144,19 +152,19 @@
   <table>
     <thead>
       <tr>
-        <th>Ref</th>
+        <th class="ref">Ref</th>
         <th>Desc</th>
-        <th class="right">Can</th>
-        <th class="right">Valor</th>
+        <th class="right can">Can</th>
+        <th class="right val">Valor</th>
       </tr>
     </thead>
     <tbody>
       {% for item in venta.items.all %}
       <tr>
-        <td>{{ item.producto.reference|slice:":6" }}</td>
-        <td>{{ item.producto.description|slice:":12" }}</td>
-        <td class="right">{{ item.cantidad }}</td>
-        <td class="right">{{ item.precio|formato_miles }}</td>
+        <td class="ref">{{ item.producto.reference }}</td>
+        <td class="desc">{{ item.producto.description }}</td>
+        <td class="right can">{{ item.cantidad }}</td>
+        <td class="right val">{{ item.precio|formato_miles }}</td>
       </tr>
       {% endfor %}
     </tbody>
