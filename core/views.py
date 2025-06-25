@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
 from decimal import Decimal
 from django.db.models.functions import TruncDate
 import openpyxl
