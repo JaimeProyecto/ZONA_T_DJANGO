@@ -49,7 +49,7 @@
           <!-- Número de factura -->
           <td class="p-3">
             <a
-              href="{% url 'factura_detalle' rep.factura_id %}"
+              href="{% url 'venta_admin_detail' rep.factura_id %}"
               class="text-blue-400 hover:underline"
             >{{ rep.factura_numero }}</a>
           </td>
@@ -58,32 +58,26 @@
           <td class="p-3">{{ rep.cliente_nombre }}</td>
 
           <!-- Total de la compra -->
-          <td class="p-3">
-            ${{ rep.total_compra|formato_miles }}
-          </td>
+          <td class="p-3">$ {{ rep.total_compra|formato_miles }}</td>
 
           <!-- Saldo pendiente -->
           <td class="p-3 text-yellow-300 font-semibold">
-            ${{ rep.saldo_pendiente|formato_miles }}
+            $ {{ rep.saldo_pendiente|formato_miles }}
           </td>
 
           <!-- Monto del último abono -->
-          <td class="p-3">
-            ${{ rep.monto_ultimo_abono|formato_miles }}
-          </td>
+          <td class="p-3">$ {{ rep.monto_ultimo_abono|formato_miles }}</td>
 
           <!-- Usuario que registró ese último abono -->
           <td class="p-3">{{ rep.registrado_por }}</td>
 
           <!-- Fecha y hora del último abono -->
-          <td class="p-3">
-            {{ rep.fecha_hora_abono|date:"d/m/Y H:i" }}
-          </td>
+          <td class="p-3">{{ rep.fecha_hora_abono|date:"d/m/Y H:i" }}</td>
 
-          <!-- Acción: abonar -->
+          <!-- Acción: Abonar -->
           <td class="p-3">
             <a
-              href="{% url 'abonar_factura' rep.factura_id %}"
+              href="{% url 'registrar_abono' %}?venta_id={{ rep.factura_id }}"
               class="text-pink-500 font-bold hover:text-pink-400"
             >➕ Abonar</a>
           </td>
@@ -101,7 +95,7 @@
         <td colspan="6"></td>
         <td class="p-3 text-right font-bold">Total Deuda:</td>
         <td class="p-3 text-yellow-300 font-bold">
-          ${{ total_deuda|formato_miles }}
+          $ {{ total_deuda|formato_miles }}
         </td>
       </tr>
     </tfoot>

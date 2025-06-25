@@ -1,81 +1,101 @@
-```html
-{# core/templates/core/admin/ventas/detail.html #}
-{% extends "core/base_dashboard.html" %}
-{% block title %}Detalle de Venta – ZONA T{% endblock %}
-{% block header %}Detalle de Venta{% endblock %}
+{# core/templates/core/admin/ventas/list.html #}
+{% extends 'core/base_dashboard.html' %}
+{% block title %}Listado de Ventas – ZONA T{% endblock %}
+{% block header %}Ventas (Panel Admin){% endblock %}
 {% load miles %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto mt-8 bg-zinc-800 p-6 rounded-2xl shadow-lg text-white">
-  <div class="flex justify-between items-center mb-4">
-    <h2 class="text-2xl font-bold text-green-400">📄 Factura #{{ venta.numero_factura }}</h2>
-    <div class="flex space-x-2">
-      <!-- Botón Imprimir -->
-      <a href="{% url 'venta_ticket' venta.id %}"
-         class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-        🖨️ Imprimir
-      </a>
-      <!-- Anular factura -->
-      {% if venta.estado == 'activa' %}
-      <form action="{% url 'venta_delete' venta.id %}" method="post">
-        {% csrf_token %}
-        <button 
-          type="submit" 
-          class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded"
-        >
-          🛑 Anular factura
-        </button>
-      </form>
-      {% else %}
-      <span class="text-red-400 font-semibold">🛑 Venta Anulada</span>
-      {% endif %}
-    </div>
+<div class="max-w-6xl mx-auto mt-8 bg-zinc-800 text-white p-6 rounded-2xl shadow-lg">
+  <div class="mb-4 flex justify-between items-center">
+    <h2 class="text-2xl font-bold text-green-400">📋 Todas las Ventas</h2>
+    <form method="get" class="flex space-x-2">
+      <input
+        type="text"
+        name="q"
+        placeholder="Buscar factura o cliente..."
+        value="{{ query }}"
+        class="rounded px-4 py-2 bg-zinc-900 border border-zinc-600 text-white"
+      />
+      <button
+        type="submit"
+        class="bg-green-600 text-black font-bold px-4 py-2 rounded hover:bg-green-700"
+      >🔍</button>
+    </form>
   </div>
 
-  <div class="space-y-2 text-sm">
-    <p><strong class="text-green-300">🧍 Cliente:</strong> {{ venta.cliente.nombre }}</p>
-    <p><strong class="text-green-300">📅 Fecha:</strong> {{ venta.fecha|date:"d/m/Y H:i" }}</p>
-    <p><strong class="text-green-300">💳 Tipo de pago:</strong> {{ venta.get_tipo_pago_display }}</p>
-    <p><strong class="text-green-300">📌 Estado:</strong>
-      {% if venta.estado == "anulada" %}
-      <span class="text-red-400 font-semibold">Anulada</span>
-      {% else %}
-      <span class="text-green-400 font-semibold">Activa</span>
-      {% endif %}
-    </p>
-  </div>
-
-  <hr class="my-6 border-zinc-600">
-
-  <h3 class="text-lg font-semibold text-green-400 mb-3">🛒 Productos Vendidos</h3>
-  <table class="w-full text-sm bg-zinc-900 rounded shadow">
+  <table class="w-full bg-zinc-900 rounded text-white text-sm">
     <thead>
-      <tr class="bg-zinc-700 text-white text-left">
-        <th class="px-4 py-2">Producto</th>
-        <th class="px-4 py-2">Cantidad</th>
-        <th class="px-4 py-2">Precio Unitario</th>
-        <th class="px-4 py-2">Subtotal</th>
+      <tr class="bg-zinc-700 text-left">
+        <th class="p-3">Factura</th>
+        <th class="p-3">Cliente</th>
+        <th class="p-3">Fecha</th>
+        <th class="p-3">Total</th>
+        <th class="p-3">Ganancia</th>            {# nueva columna #}
+        <th class="p-3">Ult. Abono</th>
+        <th class="p-3">Registró Abono</th>
+        <th class="p-3">Acciones</th>
       </tr>
     </thead>
     <tbody>
-      {% for item in venta.items.all %}
-      <tr class="border-b border-zinc-700 hover:bg-zinc-800 transition">
-        <td class="px-4 py-2">{{ item.producto.description }}</td>
-        <td class="px-4 py-2">{{ item.cantidad }}</td>
-        <td class="px-4 py-2">${{ item.precio|formato_miles }}</td>
-        <td class="px-4 py-2">${{ item.subtotal|formato_miles }}</td>
+      {% for venta in ventas %}
+      <tr class="border-t border-zinc-700 hover:bg-zinc-800 transition">
+        <td class="p-3">
+          <a href="{% url 'venta_admin_detail' venta.id %}" class="text-blue-400 hover:underline">
+            {{ venta.numero_factura }}
+          </a>
+        </td>
+        <td class="p-3">{{ venta.cliente.nombre }}</td>
+        <td class="p-3">{{ venta.fecha|date:"d/m/Y H:i" }}</td>
+        <td class="p-3">$ {{ venta.total|formato_miles }}</td>
+        <td class="p-3 text-yellow-300 font-semibold">
+          $ {{ venta.ganancia|formato_miles }}
+        </td>
+        <td class="p-3">
+          {% if venta.ultimo_abono_monto %}
+            $ {{ venta.ultimo_abono_monto|formato_miles }}
+          {% else %}
+            —
+          {% endif %}
+        </td>
+        <td class="p-3">
+          {{ venta.ultimo_abono_por|default:"—" }}
+        </td>
+        <td class="p-3 flex space-x-2">
+          <a
+            href="{% url 'venta_ticket' venta.id %}"
+            class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-2 py-1 rounded"
+          >🖨️</a>
+          <form action="{% url 'venta_delete' venta.id %}" method="post" onsubmit="return confirm('¿Anular esta venta?');">
+            {% csrf_token %}
+            <button
+              type="submit"
+              class="bg-red-500 hover:bg-red-600 text-white font-bold px-2 py-1 rounded"
+            >🛑</button>
+          </form>
+        </td>
       </tr>
       {% empty %}
       <tr>
-        <td colspan="4" class="text-center text-zinc-400 py-4">No hay productos registrados.</td>
+        <td colspan="8" class="text-center text-zinc-400 py-4">
+          No se encontraron ventas.
+        </td>
       </tr>
       {% endfor %}
     </tbody>
+    <tfoot>
+      <tr class="border-t border-zinc-700">
+        <td colspan="3"></td>
+        <td class="p-3 text-right font-bold">Total Ventas:</td>
+        <td class="p-3 font-bold">$ {{ total_ventas|formato_miles }}</td>
+        <td colspan="3"></td>
+      </tr>
+      <tr class="border-t border-zinc-700">
+        <td colspan="3"></td>
+        <td class="p-3 text-right font-bold">Total Ganancias:</td>
+        <td class="p-3 text-yellow-300 font-bold">$ {{ total_ganancias|formato_miles }}</td>
+        <td colspan="3"></td>
+      </tr>
+    </tfoot>
   </table>
-
-  <hr class="my-6 border-zinc-600">
-
-  <p class="text-right text-xl font-bold text-green-300">💰 Total: ${{ venta.total|formato_miles }}</p>
 </div>
 {% endblock %}
-```
