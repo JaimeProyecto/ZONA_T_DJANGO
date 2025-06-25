@@ -42,17 +42,18 @@ def redirect_by_role(request):
     return redirect("vendedor_dashboard")
 
 
+# core/views.py
 @login_required
 @user_passes_test(es_admin, login_url="login")
 def admin_dashboard(request):
     hoy = date.today()
 
-    # KPI: Número de clientes por vendedor
+    # Clientes por vendedor
     clientes_por_vendedor = Cliente.objects.values("creado_por__username").annotate(
         total=Count("id")
     )
 
-    # 1️⃣ Ventas diarias últimos 7 días
+    # Ventas últimos 7 días
     fechas_semana = [hoy - timedelta(days=i) for i in range(6, -1, -1)]
     ventas_semana_qs = (
         Venta.objects.filter(fecha__date__gte=hoy - timedelta(days=6), estado="activa")
@@ -68,7 +69,7 @@ def admin_dashboard(request):
         ventas_semana_map.get(d.strftime("%Y-%m-%d"), 0) for d in fechas_semana
     ]
 
-    # 2️⃣ Proporción por tipo de pago (últimos 30 días)
+    # Tipos de pago últimos 30 días
     pagos_qs = (
         Venta.objects.filter(fecha__date__gte=hoy - timedelta(days=30))
         .values("tipo_pago")
@@ -77,7 +78,7 @@ def admin_dashboard(request):
     labels_pagos = [p["tipo_pago"].capitalize() for p in pagos_qs]
     datos_pagos = [p["cantidad"] for p in pagos_qs]
 
-    # 3️⃣ Ingresos del mes en curso
+    # Ingresos del mes
     ingresos_mes = (
         Venta.objects.filter(
             fecha__year=hoy.year, fecha__month=hoy.month, estado="activa"
@@ -85,7 +86,7 @@ def admin_dashboard(request):
         or 0
     )
 
-    # 4️⃣ Productos bajo stock (umbral <= 5)
+    # Productos bajo stock
     bajo_stock = Product.objects.filter(stock__lte=5).count()
 
     return render(
