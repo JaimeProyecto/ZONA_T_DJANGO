@@ -19,6 +19,13 @@
           class="bg-green-500 hover:bg-green-600 px-4 py-2 rounded font-bold text-black">
     🔍 Buscar
   </button>
+<a
+  href="{% url 'exportar_ventas_excel_admin' %}?q={{ query }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}"
+  class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded font-bold"
+>
+  📤 Exportar a Excel
+</a>
+
 </form>
 
 <table class="w-full bg-gray-900 rounded overflow-hidden text-white text-sm">

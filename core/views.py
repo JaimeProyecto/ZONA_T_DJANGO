@@ -850,20 +850,42 @@ def exportar_ventas_excel(request, fecha):
     return response
 
 
+# core/views.py
 @login_required
 @user_passes_test(es_admin, login_url="login")
 def exportar_ventas_excel_admin(request):
-    ventas = Venta.objects.select_related("cliente", "usuario").order_by("-fecha")
+    """
+    Exporta a Excel las ventas del administrador, respetando los mismos filtros
+    de búsqueda y rango de fechas que en la lista de ventas.
+    """
+    # 1) Parámetros de filtro GET
+    q = request.GET.get("q", "").strip()
+    fecha_inicio = parse_date(request.GET.get("fecha_inicio", ""))
+    fecha_fin = parse_date(request.GET.get("fecha_fin", ""))
 
+    # 2) Queryset base
+    qs = Venta.objects.select_related("cliente", "usuario").order_by("-fecha")
+
+    # 3) Aplicar filtros idénticos a los de la vista de listado
+    if q:
+        qs = qs.filter(Q(cliente__nombre__icontains=q) | Q(numero_factura__icontains=q))
+    if fecha_inicio:
+        qs = qs.filter(fecha__date__gte=fecha_inicio)
+    if fecha_fin:
+        qs = qs.filter(fecha__date__lte=fecha_fin)
+
+    # 4) Preparar el workbook
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Ventas Administrador"
 
+    # 5) Cabecera
     ws.append(
         ["Factura", "Cliente", "Tipo de Pago", "Total", "Fecha", "Estado", "Usuario"]
     )
 
-    for v in ventas:
+    # 6) Filas de datos
+    for v in qs:
         ws.append(
             [
                 v.numero_factura,
@@ -876,6 +898,7 @@ def exportar_ventas_excel_admin(request):
             ]
         )
 
+    # 7) Streaming de la respuesta
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
