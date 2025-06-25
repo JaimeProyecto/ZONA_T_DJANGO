@@ -18,11 +18,13 @@
       {% endfor %}
     </ul>
   </div>
+
   <!-- KPI: Ingresos Mensuales -->
   <div class="bg-zinc-800 p-6 rounded-2xl shadow-lg flex flex-col">
     <span class="text-sm text-zinc-400">📈 Ingresos Mes</span>
     <span class="mt-2 text-3xl font-bold text-green-300">${{ ingresos_mes|formato_miles }}</span>
   </div>
+
   <!-- KPI: Stock Bajo -->
   <div class="bg-zinc-800 p-6 rounded-2xl shadow-lg flex flex-col">
     <span class="text-sm text-zinc-400">🛒 Stock Bajo (≤5)</span>
@@ -43,7 +45,7 @@
   </div>
 </div>
 
-{# Inyección directa de arrays JS con |safe #}
+{# Inyectamos las listas directamente a JS con |safe #}
 <script>
   const fechasSemana = {{ fechas_semana|safe }};
   const serieVentas   = {{ serie_ventas|safe }};
