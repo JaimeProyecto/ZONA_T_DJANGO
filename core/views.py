@@ -427,57 +427,39 @@ def ticket_venta(request, venta_id):
     return render(request, "core/print.html", {"venta": venta})
 
 
-@login_required
-@user_passes_test(es_admin, login_url="login")
-def venta_admin_detail(request, venta_id):
-    venta = get_object_or_404(Venta, id=venta_id)
-    return render(request, "core/admin/ventas/detail.html", {"venta": venta})
-
-
-@login_required
-@user_passes_test(es_vendedor, login_url="login")
-def venta_vendedor_detail(request, venta_id):
-    venta = get_object_or_404(Venta, id=venta_id, usuario=request.user)
-    return render(request, "core/vendedor/ventas/detail.html", {"venta": venta})
-
-
 # core/views.py
 @login_required
 @user_passes_test(es_admin, login_url="login")
 def venta_admin_list(request):
     # 1) Parámetros de filtro
     query = request.GET.get("q", "").strip()
-    fecha_inicio = parse_date(
-        request.GET.get("fecha_inicio", "")
-    )  # convierte "YYYY-MM-DD" a date
+    fecha_inicio = parse_date(request.GET.get("fecha_inicio", ""))
     fecha_fin = parse_date(request.GET.get("fecha_fin", ""))
 
-    # 2) Base queryset con prefetch/select_related
+    # 2) Queryset base, ordenado por el campo `fecha`
     qs = (
         Venta.objects.select_related("cliente", "usuario")
         .prefetch_related("items__producto", "abonos__usuario")
-        .order_by("-created_at")
+        .order_by("-fecha")
     )
 
-    # 3) Aplicar filtros
+    # 3) Aplicar filtros de búsqueda y rango de fechas
     if query:
         qs = qs.filter(
             Q(cliente__nombre__icontains=query) | Q(numero_factura__icontains=query)
         )
     if fecha_inicio:
-        qs = qs.filter(created_at__date__gte=fecha_inicio)
+        qs = qs.filter(fecha__date__gte=fecha_inicio)
     if fecha_fin:
-        qs = qs.filter(created_at__date__lte=fecha_fin)
+        qs = qs.filter(fecha__date__lte=fecha_fin)
 
-    # 4) Calcular ganancias y último abono en Python
+    # 4) Calcular ganancia y último abono
     ventas = []
     for v in qs:
-        # ganancia total de esta venta
         v.ganancia = sum(
             (item.precio - item.producto.purchase_price) * item.cantidad
             for item in v.items.all()
         )
-        # último abono
         ultimo = v.abonos.order_by("-fecha").first()
         v.ultimo_abono_monto = ultimo.monto if ultimo else None
         v.ultimo_abono_por = (
@@ -485,11 +467,11 @@ def venta_admin_list(request):
         )
         ventas.append(v)
 
-    # 5) totales
+    # 5) Totales
     total_ventas = sum(v.total for v in ventas)
     total_ganancias = sum(v.ganancia for v in ventas)
 
-    # 6) Renderizar
+    # 6) Renderizar plantilla
     return render(
         request,
         "core/admin/ventas/list.html",
