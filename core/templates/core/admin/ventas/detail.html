@@ -1,4 +1,3 @@
-{# core/templates/core/admin/ventas/list.html #}
 {% extends 'core/base_dashboard.html' %}
 {% block title %}Listado de Ventas – ZONA T{% endblock %}
 {% block header %}Ventas (Panel Admin){% endblock %}
@@ -10,11 +9,18 @@
     <h2 class="text-2xl font-bold text-green-400">📋 Todas las Ventas</h2>
     <form method="get" class="flex space-x-2">
       <input
-        type="text"
-        name="q"
-        placeholder="Buscar factura o cliente..."
+        type="text" name="q" placeholder="Buscar factura o cliente..."
         value="{{ query }}"
         class="rounded px-4 py-2 bg-zinc-900 border border-zinc-600 text-white"
+      />
+      <!-- filtros de fecha -->
+      <input
+        type="date" name="fecha_inicio" value="{{ fecha_inicio }}"
+        class="rounded px-2 py-2 bg-zinc-900 border border-zinc-600 text-white"
+      />
+      <input
+        type="date" name="fecha_fin" value="{{ fecha_fin }}"
+        class="rounded px-2 py-2 bg-zinc-900 border border-zinc-600 text-white"
       />
       <button
         type="submit"
@@ -30,8 +36,8 @@
         <th class="p-3">Cliente</th>
         <th class="p-3">Fecha</th>
         <th class="p-3">Total</th>
-        <th class="p-3">Ganancia</th>            {# nueva columna #}
-        <th class="p-3">Ult. Abono</th>
+        <th class="p-3">Ganancia</th>
+        <th class="p-3">Últ. Abono</th>
         <th class="p-3">Registró Abono</th>
         <th class="p-3">Acciones</th>
       </tr>
@@ -45,7 +51,8 @@
           </a>
         </td>
         <td class="p-3">{{ venta.cliente.nombre }}</td>
-        <td class="p-3">{{ venta.fecha|date:"d/m/Y H:i" }}</td>
+        <!-- usaremos created_at en lugar de fecha -->
+        <td class="p-3">{{ venta.created_at|date:"d/m/Y H:i" }}</td>
         <td class="p-3">$ {{ venta.total|formato_miles }}</td>
         <td class="p-3 text-yellow-300 font-semibold">
           $ {{ venta.ganancia|formato_miles }}
@@ -65,7 +72,8 @@
             href="{% url 'venta_ticket' venta.id %}"
             class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-2 py-1 rounded"
           >🖨️</a>
-          <form action="{% url 'venta_delete' venta.id %}" method="post" onsubmit="return confirm('¿Anular esta venta?');">
+          <form action="{% url 'venta_delete' venta.id %}" method="post"
+                onsubmit="return confirm('¿Anular esta venta?');">
             {% csrf_token %}
             <button
               type="submit"

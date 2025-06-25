@@ -1,40 +1,47 @@
 {% extends "core/base_dashboard.html" %}
 {% block title %}Registrar Abono – ZONA T{% endblock %}
 {% block header %}Registrar Abono{% endblock %}
-{% load miles %}
 
 {% block content %}
-<div class="max-w-md mx-auto bg-gray-800 bg-opacity-60 p-6 rounded-lg shadow-lg">
-
+<div class="max-w-md mx-auto bg-zinc-800 text-white p-6 rounded-2xl shadow-lg">
   {% if messages %}
-    {% for message in messages %}
+    {% for m in messages %}
       <div class="mb-4 p-3 rounded bg-green-600 text-black font-semibold shadow">
-        {{ message }}
+        {{ m }}
       </div>
     {% endfor %}
   {% endif %}
 
-  <h2 class="text-2xl font-bold text-green-400 flex items-center mb-6">
-    💰 <span class="ml-2">Registrar Abono</span>
-  </h2>
+  <h2 class="text-2xl font-bold text-green-400 mb-4">💰 Registrar Abono</h2>
 
-  <form method="post">
+  {% if venta %}
+    <p class="mb-4">
+      <strong class="text-blue-400">Factura:</strong>
+      <span class="font-mono">{{ venta.numero_factura }}</span>
+      &nbsp;–&nbsp;
+      <strong class="text-green-300">Cliente:</strong>
+      {{ venta.cliente.nombre }}
+    </p>
+  {% endif %}
+
+  <form method="post" class="space-y-4">
     {% csrf_token %}
+    {{ form.venta }} {# HiddenInput #}
 
-    <div class="mb-4">
-      <label class="block text-sm font-semibold text-green-300 mb-1">Venta:</label>
-      {{ form.venta }}
-    </div>
-
-    <div class="mb-6">
-      <label class="block text-sm font-semibold text-green-300 mb-1">Monto:</label>
+    <div>
+      <label class="block text-sm font-semibold text-green-300 mb-1">Monto</label>
       {{ form.monto }}
+      {% if form.monto.errors %}
+        <p class="text-red-500 text-sm">{{ form.monto.errors.0 }}</p>
+      {% endif %}
     </div>
 
-    <button type="submit" class="bg-green-500 hover:bg-green-600 text-black font-bold py-2 px-4 rounded w-full shadow-md">
+    <button
+      type="submit"
+      class="w-full bg-green-600 hover:bg-green-700 text-black font-bold py-2 rounded"
+    >
       Registrar 💾
     </button>
   </form>
-
 </div>
 {% endblock %}

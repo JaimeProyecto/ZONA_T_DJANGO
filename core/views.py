@@ -153,19 +153,6 @@ def es_vendedor(user):
     return user.is_authenticated and not user.is_superuser
 
 
-# --- Clientes ---
-@login_required
-@user_passes_test(es_admin, login_url="login")
-def venta_admin_list(request):
-    ventas = Venta.objects.all().select_related("cliente", "usuario")
-    ventas = ventas.order_by("-fecha")
-    return render(
-        request,
-        "core/admin/ventas/list.html",
-        {"ventas": ventas},
-    )
-
-
 @login_required
 @user_passes_test(es_vendedor, login_url="login")
 def vendedor_cliente_list(request):
@@ -458,51 +445,59 @@ def venta_vendedor_detail(request, venta_id):
 @login_required
 @user_passes_test(es_admin, login_url="login")
 def venta_admin_list(request):
+    # 1) Parámetros de filtro
     query = request.GET.get("q", "").strip()
-    fecha_inicio = request.GET.get("fecha_inicio", "").strip()
-    fecha_fin = request.GET.get("fecha_fin", "").strip()
+    fecha_inicio = parse_date(
+        request.GET.get("fecha_inicio", "")
+    )  # convierte "YYYY-MM-DD" a date
+    fecha_fin = parse_date(request.GET.get("fecha_fin", ""))
 
+    # 2) Base queryset con prefetch/select_related
     qs = (
         Venta.objects.select_related("cliente", "usuario")
         .prefetch_related("items__producto", "abonos__usuario")
-        .order_by("-fecha")
+        .order_by("-created_at")
     )
+
+    # 3) Aplicar filtros
     if query:
         qs = qs.filter(
             Q(cliente__nombre__icontains=query) | Q(numero_factura__icontains=query)
         )
     if fecha_inicio:
-        qs = qs.filter(fecha__date__gte=fecha_inicio)
+        qs = qs.filter(created_at__date__gte=fecha_inicio)
     if fecha_fin:
-        qs = qs.filter(fecha__date__lte=fecha_fin)
+        qs = qs.filter(created_at__date__lte=fecha_fin)
 
+    # 4) Calcular ganancias y último abono en Python
     ventas = []
     for v in qs:
-        # ganancia
-        ganancia = sum(
+        # ganancia total de esta venta
+        v.ganancia = sum(
             (item.precio - item.producto.purchase_price) * item.cantidad
             for item in v.items.all()
         )
         # último abono
         ultimo = v.abonos.order_by("-fecha").first()
+        v.ultimo_abono_monto = ultimo.monto if ultimo else None
         v.ultimo_abono_por = (
             ultimo.usuario.username if (ultimo and ultimo.usuario) else None
         )
-        v.ultimo_abono_monto = ultimo.monto if ultimo else None
-        v.ganancia = ganancia
         ventas.append(v)
 
+    # 5) totales
     total_ventas = sum(v.total for v in ventas)
     total_ganancias = sum(v.ganancia for v in ventas)
 
+    # 6) Renderizar
     return render(
         request,
         "core/admin/ventas/list.html",
         {
             "ventas": ventas,
             "query": query,
-            "fecha_inicio": fecha_inicio,
-            "fecha_fin": fecha_fin,
+            "fecha_inicio": fecha_inicio and fecha_inicio.strftime("%Y-%m-%d"),
+            "fecha_fin": fecha_fin and fecha_fin.strftime("%Y-%m-%d"),
             "total_ventas": total_ventas,
             "total_ganancias": total_ganancias,
         },
@@ -604,7 +599,10 @@ def venta_delete(request, venta_id):
 # --- Pagos ---
 @login_required
 def registrar_abono(request):
+    venta = None
     venta_id = request.GET.get("venta_id")
+    if venta_id:
+        venta = get_object_or_404(Venta, pk=venta_id)
 
     if request.method == "POST":
         form = AbonoForm(request.POST)
@@ -612,18 +610,14 @@ def registrar_abono(request):
             abono = form.save(commit=False)
             abono.usuario = request.user
             abono.save()
-            # Redirige al listado de saldos pendientes según rol
             if request.user.is_superuser:
                 return redirect("saldo_pendiente_admin")
-            else:
-                return redirect("saldo_pendiente")
+            return redirect("saldo_pendiente")
     else:
         form = AbonoForm(initial={"venta": venta_id}) if venta_id else AbonoForm()
 
     return render(
-        request,
-        "core/admin/pagos/registrar_abono.html",  # o core/vendedor/... si tienes plantilla distinta
-        {"form": form},
+        request, "core/admin/pagos/registrar_abono.html", {"form": form, "venta": venta}
     )
 
 
@@ -632,36 +626,38 @@ def registrar_abono(request):
 @user_passes_test(es_admin, login_url="login")
 def saldo_pendiente_admin(request):
     query = request.GET.get("q", "").strip()
+    fecha_inicio = parse_date(request.GET.get("fecha_inicio", ""))  # convierte ISO-date
+    fecha_fin = parse_date(request.GET.get("fecha_fin", ""))
 
     qs = (
-        Venta.objects.filter(tipo_pago="credito")
-        .select_related("cliente", "usuario")
+        Venta.objects.filter(tipo_pago="credito", estado="activa")
+        .select_related("cliente")
+        .prefetch_related("abonos__usuario")
         .order_by("-fecha")
     )
+
+    # filtros
     if query:
         qs = qs.filter(
             Q(cliente__nombre__icontains=query) | Q(numero_factura__icontains=query)
         )
+    if fecha_inicio:
+        qs = qs.filter(fecha__date__gte=fecha_inicio)
+    if fecha_fin:
+        qs = qs.filter(fecha__date__lte=fecha_fin)
 
     ventas = []
     for v in qs:
         saldo = v.calcular_saldo_pendiente()
         if saldo > 0:
-            # datos que ya tenías
             v.total_compra = v.total
             v.saldo_pendiente = saldo
-
-            # extraigo el último abono
             ultimo = v.abonos.order_by("-fecha").first()
-            if ultimo:
-                v.ultimo_abono_monto = ultimo.monto
-                v.ultimo_abono_por = ultimo.usuario.username if ultimo.usuario else None
-                v.ultimo_abono_fecha = ultimo.fecha
-            else:
-                v.ultimo_abono_monto = None
-                v.ultimo_abono_por = None
-                v.ultimo_abono_fecha = None
-
+            v.ultimo_abono_monto = ultimo.monto if ultimo else None
+            v.ultimo_abono_por = (
+                ultimo.usuario.username if (ultimo and ultimo.usuario) else None
+            )
+            v.ultimo_abono_fecha = ultimo.fecha if ultimo else None
             ventas.append(v)
 
     total_deuda = sum(v.saldo_pendiente for v in ventas)
@@ -672,6 +668,8 @@ def saldo_pendiente_admin(request):
         {
             "ventas": ventas,
             "query": query,
+            "fecha_inicio": fecha_inicio and fecha_inicio.strftime("%Y-%m-%d"),
+            "fecha_fin": fecha_fin and fecha_fin.strftime("%Y-%m-%d"),
             "total_deuda": total_deuda,
         },
     )
@@ -754,26 +752,54 @@ def reporte_ventas_diarias(request):
 
 
 # Reporte 2: Clientes con deuda
+@login_required
+@user_passes_test(es_admin, login_url="login")
 def reporte_clientes_con_deuda(request):
-    query = request.GET.get("q", "")
-    clientes = Cliente.objects.all()
+    query = request.GET.get("q", "").strip()
 
+    # 1) Partimos de ventas a crédito activas
+    qs = (
+        Venta.objects.filter(estado="activa", tipo_pago="credito")
+        .select_related("cliente", "usuario")
+        .prefetch_related("abonos__usuario")
+        .order_by("-fecha")
+    )
+
+    # 2) Filtramos por nombre de cliente o número de factura
     if query:
-        clientes = clientes.filter(nombre__icontains=query)
+        qs = qs.filter(
+            Q(cliente__nombre__icontains=query) | Q(numero_factura__icontains=query)
+        )
 
-    clientes_con_deuda = []
+    # 3) Construimos la lista de "rep" con todos los atributos que usa tu template
+    ventas_con_deuda = []
+    for v in qs:
+        saldo = v.calcular_saldo_pendiente()
+        if saldo > 0:
+            # último abono
+            ultimo = v.abonos.order_by("-fecha").first()
 
-    for cliente in clientes:
-        ventas = cliente.venta_set.filter(estado="activa", tipo_pago="credito")
-        saldo_total = sum(venta.calcular_saldo_pendiente() for venta in ventas)
-        if saldo_total > 0:
-            cliente.deuda_total = saldo_total  # asignar atributo dinámico
-            clientes_con_deuda.append(cliente)
+            # Creamos un objeto dinámico (podrías usar SimpleNamespace o hasta dict)
+            v.factura_id = v.id
+            v.factura_numero = v.numero_factura
+            v.cliente_nombre = v.cliente.nombre
+            v.total_compra = v.total
+            v.saldo_pendiente = saldo
+            v.monto_ultimo_abono = ultimo.monto if ultimo else None
+            v.registrado_por = (
+                ultimo.usuario.username if (ultimo and ultimo.usuario) else None
+            )
+            v.fecha_hora_abono = ultimo.fecha if ultimo else None
+
+            ventas_con_deuda.append(v)
 
     return render(
         request,
         "core/admin/reportes/clientes_con_deuda.html",
-        {"clientes": clientes_con_deuda},
+        {
+            "clientes": ventas_con_deuda,
+            "query": query,
+        },
     )
 
 

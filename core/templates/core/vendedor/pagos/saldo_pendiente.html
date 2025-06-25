@@ -1,73 +1,92 @@
 {% extends "core/base_dashboard.html" %}
-{% block title %}Saldo Pendiente{% endblock %}
+{% block title %}Saldo Pendiente – ZONA T{% endblock %}
+{% block header %}📊 Saldos Pendientes{% endblock %}
 {% load miles %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto bg-gray-800 p-6 rounded shadow">
-  <h2 class="text-xl font-bold text-green-400 mb-4">📊 Saldos Pendientes</h2>
-
-  <form method="get" class="mb-6 flex space-x-2">
-    <input name="q" value="{{ query }}" placeholder="Buscar por cliente o factura..."
-           class="flex-1 px-4 py-2 rounded bg-gray-700 text-white focus:ring-green-400"/>
-    <button type="submit"
-            class="bg-green-500 px-4 py-2 font-bold text-black rounded hover:bg-green-600">
-      🔍 Buscar
-    </button>
+<div class="max-w-6xl mx-auto mt-8 bg-zinc-800 text-white p-6 rounded-2xl shadow-lg">
+  <!-- filtros de búsqueda y fecha -->
+  <form method="get" class="mb-6 flex flex-wrap gap-2 items-center">
+    <input
+      type="text" name="q" placeholder="Buscar por cliente o factura..."
+      value="{{ query }}"
+      class="flex-1 px-4 py-2 rounded bg-zinc-900 border border-zinc-600"
+    />
+    <input
+      type="date" name="fecha_inicio" value="{{ fecha_inicio }}"
+      class="px-3 py-2 rounded bg-zinc-900 border border-zinc-600"
+    />
+    <input
+      type="date" name="fecha_fin" value="{{ fecha_fin }}"
+      class="px-3 py-2 rounded bg-zinc-900 border border-zinc-600"
+    />
+    <button
+      type="submit"
+      class="bg-green-600 text-black font-bold px-4 py-2 rounded hover:bg-green-700"
+    >🔍</button>
+    <a
+      href="{% url 'exportar_clientes_deuda_excel' %}"
+      class="ml-auto bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+    >📤 Exportar a Excel</a>
   </form>
 
-  <table class="w-full bg-gray-900 rounded overflow-x-auto text-sm">
-    <thead class="bg-gray-700 text-white">
-      <tr>
-        <th class="px-4 py-2">Factura</th>
-        <th class="px-4 py-2">Cliente</th>
-        <th class="px-4 py-2 text-right">Total Compra</th>
-        <th class="px-4 py-2 text-right">Saldo Pendiente</th>
-        <th class="px-4 py-2 text-right">Monto Último Abono</th>
-        <th class="px-4 py-2">Registrado Por</th>
-        <th class="px-4 py-2">Fecha/Hora Abono</th>
-        <th class="px-4 py-2 text-right">Acción</th>
+  <div class="overflow-x-auto">
+  <table class="w-full bg-zinc-900 rounded text-white text-sm">
+    <thead class="bg-zinc-700">
+      <tr class="text-left">
+        <th class="p-3">Factura</th>
+        <th class="p-3">Cliente</th>
+        <th class="p-3 text-right">Total Compra</th>
+        <th class="p-3 text-right">Saldo Pendiente</th>
+        <th class="p-3 text-right">Monto Último Abono</th>
+        <th class="p-3">Registrado Por</th>
+        <th class="p-3">Fecha/Hora Abono</th>
+        <th class="p-3 text-right">Acción</th>
       </tr>
     </thead>
-    <tbody class="text-white">
+    <tbody>
       {% for venta in ventas %}
-      <tr class="border-t border-gray-700 hover:bg-gray-800">
-        <td class="px-4 py-2 font-mono text-blue-400">{{ venta.numero_factura }}</td>
-        <td class="px-4 py-2">{{ venta.cliente.nombre }}</td>
-        <td class="px-4 py-2 text-right">${{ venta.total_compra|formato_miles }}</td>
-        <td class="px-4 py-2 text-right text-yellow-400">${{ venta.saldo_pendiente|formato_miles }}</td>
-        <td class="px-4 py-2 text-right">
+      <tr class="border-t border-zinc-700 hover:bg-zinc-800 transition">
+        <td class="p-3 font-mono text-blue-400">
+          {{ venta.numero_factura }}
+        </td>
+        <td class="p-3">{{ venta.cliente.nombre }}</td>
+        <td class="p-3 text-right">${{ venta.total_compra|formato_miles }}</td>
+        <td class="p-3 text-right text-yellow-300">${{ venta.saldo_pendiente|formato_miles }}</td>
+        <td class="p-3 text-right">
           {% if venta.ultimo_abono_monto %}
             ${{ venta.ultimo_abono_monto|formato_miles }}
           {% else %}
             —
           {% endif %}
         </td>
-        <td class="px-4 py-2">{{ venta.ultimo_abono_por|default:"—" }}</td>
-        <td class="px-4 py-2">
+        <td class="p-3">{{ venta.ultimo_abono_por|default:"—" }}</td>
+        <td class="p-3">
           {% if venta.ultimo_abono_fecha %}
             {{ venta.ultimo_abono_fecha|date:"d/m/Y H:i" }}
           {% else %}
             —
           {% endif %}
         </td>
-        <td class="px-4 py-2 text-right">
-          <a href="{% url 'registrar_abono' %}?venta_id={{ venta.id }}"
-             class="text-blue-400 hover:underline font-bold text-sm">
-            ➕ Abonar
-          </a>
+        <td class="p-3 text-right">
+          <a
+            href="{% url 'registrar_abono' %}?venta_id={{ venta.id }}"
+            class="text-blue-400 hover:underline font-bold text-sm"
+          >➕ Abonar</a>
         </td>
       </tr>
       {% empty %}
       <tr>
-        <td colspan="8" class="py-4 text-center text-gray-400">
+        <td colspan="8" class="py-4 text-center text-zinc-400">
           No hay ventas a crédito con saldo pendiente.
         </td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
+  </div>
 
-  <div class="flex justify-end mt-4 text-white space-x-4">
+  <div class="flex justify-end mt-4 space-x-2">
     <p class="font-semibold">💰 Total Deuda:</p>
     <p class="text-yellow-300 font-bold text-lg">
       ${{ total_deuda|formato_miles }}
