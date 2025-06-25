@@ -1,7 +1,7 @@
 import json
 from datetime import datetime, timedelta
 from decimal import Decimal
-
+from django.db.models.functions import TruncDate
 import openpyxl
 
 from django.conf import settings
@@ -43,31 +43,178 @@ def redirect_by_role(request):
 
 
 @login_required
+@user_passes_test(es_admin, login_url="login")
 def admin_dashboard(request):
+    hoy = date.today()
+
+    # KPI: Número de clientes por vendedor
     clientes_por_vendedor = Cliente.objects.values("creado_por__username").annotate(
         total=Count("id")
     )
+
+    # 1️⃣ Ventas diarias últimos 7 días
+    fechas_semana = [hoy - timedelta(days=i) for i in range(6, -1, -1)]
+    ventas_semana_qs = (
+        Venta.objects.filter(fecha__date__gte=hoy - timedelta(days=6), estado="activa")
+        .annotate(dia=TruncDate("fecha"))
+        .values("dia")
+        .annotate(total_dia=Sum("total"))
+        .order_by("dia")
+    )
+    ventas_semana_map = {
+        v["dia"].strftime("%Y-%m-%d"): v["total_dia"] for v in ventas_semana_qs
+    }
+    serie_ventas = [
+        ventas_semana_map.get(d.strftime("%Y-%m-%d"), 0) for d in fechas_semana
+    ]
+
+    # 2️⃣ Proporción por tipo de pago (últimos 30 días)
+    pagos_qs = (
+        Venta.objects.filter(fecha__date__gte=hoy - timedelta(days=30))
+        .values("tipo_pago")
+        .annotate(cantidad=Count("id"))
+    )
+    labels_pagos = [p["tipo_pago"].capitalize() for p in pagos_qs]
+    datos_pagos = [p["cantidad"] for p in pagos_qs]
+
+    # 3️⃣ Ingresos del mes en curso
+    ingresos_mes = (
+        Venta.objects.filter(
+            fecha__year=hoy.year, fecha__month=hoy.month, estado="activa"
+        ).aggregate(total=Sum("total"))["total"]
+        or 0
+    )
+
+    # 4️⃣ Productos bajo stock (umbral <= 5)
+    bajo_stock = Product.objects.filter(stock__lte=5).count()
+
     return render(
         request,
         "core/admin/admin_dashboard.html",
-        {"clientes_por_vendedor": clientes_por_vendedor},
+        {
+            "clientes_por_vendedor": clientes_por_vendedor,
+            "fechas_semana": [d.strftime("%d/%m") for d in fechas_semana],
+            "serie_ventas": serie_ventas,
+            "labels_pagos": labels_pagos,
+            "datos_pagos": datos_pagos,
+            "ingresos_mes": ingresos_mes,
+            "bajo_stock": bajo_stock,
+        },
     )
 
 
 @login_required
+@user_passes_test(es_vendedor, login_url="login")
 def vendedor_dashboard(request):
-    return render(request, "core/vendedor/vendedor_dashboard.html")
+    """
+    Panel de vendedor con KPIs, mini–charts y listados.
+    """
+    hoy = date.today()
+
+    # 1️⃣ Ventas diarias últimos 7 días (solo propias y activas)
+    fechas_semana = [hoy - timedelta(days=i) for i in range(6, -1, -1)]
+    ventas_semana_qs = (
+        Venta.objects.filter(
+            usuario=request.user,
+            estado="activa",
+            fecha__date__gte=hoy - timedelta(days=6),
+        )
+        .annotate(dia=TruncDate("fecha"))
+        .values("dia")
+        .annotate(total_dia=Sum("total"))
+        .order_by("dia")
+    )
+    mapa = {v["dia"].strftime("%Y-%m-%d"): v["total_dia"] for v in ventas_semana_qs}
+    serie_ventas = [mapa.get(d.strftime("%Y-%m-%d"), 0) for d in fechas_semana]
+
+    # 2️⃣ Proporción por tipo de pago en últimos 30 días
+    pagos_qs = (
+        Venta.objects.filter(
+            usuario=request.user, fecha__date__gte=hoy - timedelta(days=30)
+        )
+        .values("tipo_pago")
+        .annotate(cantidad=Count("id"))
+    )
+    labels_pagos = [p["tipo_pago"].capitalize() for p in pagos_qs]
+    datos_pagos = [p["cantidad"] for p in pagos_qs]
+
+    # 3️⃣ KPI: Ventas Hoy
+    ventas_hoy = Venta.objects.filter(
+        usuario=request.user, fecha__date=hoy, estado="activa"
+    )
+    ventas_hoy_count = ventas_hoy.count()
+    ventas_hoy_total = ventas_hoy.aggregate(total=Sum("total"))["total"] or 0
+
+    # 4️⃣ KPI: Ingresos Mes
+    ingresos_mes = (
+        Venta.objects.filter(
+            usuario=request.user,
+            fecha__year=hoy.year,
+            fecha__month=hoy.month,
+            estado="activa",
+        ).aggregate(total=Sum("total"))["total"]
+        or 0
+    )
+
+    # 5️⃣ KPI: Abonos Pendientes (crédito con saldo > 0)
+    creditos = Venta.objects.filter(
+        usuario=request.user, tipo_pago="credito", estado="activa"
+    )
+    abonos_pendientes = sum(1 for v in creditos if v.calcular_saldo_pendiente() > 0)
+
+    # 6️⃣ KPI: Productos Agotándose (top 5 vendidos con stock ≤ 5)
+    top_productos = (
+        VentaItem.objects.filter(venta__usuario=request.user)
+        .values("producto")
+        .annotate(total_vend=Sum("cantidad"))
+        .order_by("-total_vend")[:5]
+    )
+    prod_ids = [p["producto"] for p in top_productos]
+    mis_bajo_stock_count = Product.objects.filter(id__in=prod_ids, stock__lte=5).count()
+
+    # 7️⃣ Últimas 5 ventas
+    ventas_recientes = Venta.objects.filter(usuario=request.user).order_by("-fecha")[:5]
+
+    return render(
+        request,
+        "core/vendedor/vendedor_dashboard.html",
+        {
+            "fechas_semana": [d.strftime("%d/%m") for d in fechas_semana],
+            "serie_ventas": serie_ventas,
+            "labels_pagos": labels_pagos,
+            "datos_pagos": datos_pagos,
+            "ventas_hoy_count": ventas_hoy_count,
+            "ventas_hoy_total": ventas_hoy_total,
+            "ingresos_mes": ingresos_mes,
+            "abonos_pendientes": abonos_pendientes,
+            "mis_bajo_stock_count": mis_bajo_stock_count,
+            "ventas_recientes": ventas_recientes,
+        },
+    )
 
 
 # --- CRUD Productos ---
+@login_required
+@user_passes_test(es_admin, login_url="login")
 def admin_product_list(request):
+    """
+    Muestra el listado de productos con filtros, totales de stock y valor de inventario.
+    """
     query = request.GET.get("buscar", "").strip()
-    products = (
-        Product.objects.filter(
-            Q(reference__icontains=query) | Q(description__icontains=query)
-        )
-        if query
-        else Product.objects.all()
+    qs = Product.objects.all()
+    if query:
+        qs = qs.filter(Q(reference__icontains=query) | Q(description__icontains=query))
+    products = qs.order_by("reference")
+
+    # Total de stock
+    total_stock = products.aggregate(total_stock=Sum("stock"))["total_stock"] or 0
+
+    # Total valor de inventario = sum(purchase_price * stock)
+    total_valor_inventario = (
+        products.aggregate(
+            total_valor=Sum(F("purchase_price") * F("stock"), output_field=FloatField())
+        )["total_valor"]
+        or 0
     )
 
     return render(
@@ -75,7 +222,9 @@ def admin_product_list(request):
         "core/admin/products/list.html",
         {
             "products": products,
-            "todos_los_productos": Product.objects.all(),
+            "query": query,
+            "total_stock": total_stock,
+            "total_valor_inventario": total_valor_inventario,
         },
     )
 
@@ -1082,3 +1231,92 @@ def cargar_productos_excel(request):
         return redirect("admin_product_list")
 
     return render(request, "core/admin/products/cargar_productos.html")
+
+
+@login_required
+@user_passes_test(es_admin, login_url="login")
+def exportar_productos_excel(request):
+    """
+    Exporta a Excel el listado filtrado de productos, incluyendo valor de inventario.
+    """
+    query = request.GET.get("buscar", "").strip()
+    qs = Product.objects.all()
+    if query:
+        qs = qs.filter(Q(reference__icontains=query) | Q(description__icontains=query))
+    products = qs.order_by("reference")
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Productos"
+
+    # Cabecera
+    ws.append(
+        ["Referencia", "Descripción", "Precio de Compra", "Stock", "Valor Inventario"]
+    )
+
+    # Filas
+    for p in products:
+        ws.append(
+            [
+                p.reference,
+                p.description,
+                float(p.purchase_price),
+                p.stock,
+                float(p.purchase_price * p.stock),
+            ]
+        )
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename="productos.xlsx"'
+    wb.save(response)
+    return response
+
+
+# core/views.py
+@login_required
+@user_passes_test(es_admin, login_url="login")
+def exportar_clientes_excel(request):
+    """
+    Exporta a Excel el listado de clientes filtrado por 'q' (nombre o cédula).
+    """
+    # 1) Obtener término de búsqueda
+    q = request.GET.get("q", "").strip()
+
+    # 2) Queryset inicial y posible filtro
+    qs = Cliente.objects.all().order_by("nombre")
+    if q:
+        qs = qs.filter(Q(nombre__icontains=q) | Q(cedula__icontains=q))
+
+    # 3) Crear workbook y hoja
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Clientes"
+
+    # 4) Cabecera
+    ws.append(
+        ["ID", "Nombre", "Cédula", "Teléfono", "Dirección", "Email", "Creado Por"]
+    )
+
+    # 5) Filas de datos
+    for c in qs:
+        ws.append(
+            [
+                c.id,
+                c.nombre,
+                c.cedula,
+                c.telefono,
+                c.direccion,
+                c.email or "",
+                c.creado_por.username if c.creado_por else "",
+            ]
+        )
+
+    # 6) Preparar respuesta HTTP
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename="clientes.xlsx"'
+    wb.save(response)
+    return response

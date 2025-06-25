@@ -1,23 +1,105 @@
+{# core/templates/core/admin/admin_dashboard.html #}
 {% extends 'core/base_dashboard.html' %}
-{% block title %}Reportes – ZONA T{% endblock %}
+{% block title %}Panel de Control – ZONA T{% endblock %}
+{% block header %}Panel de Control{% endblock %}
+{% load miles %}
+{% load json_script %}
 
 {% block content %}
-<h2 class="text-3xl font-bold mb-6">Reportes del Sistema</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+  <!-- KPI: Clientes por vendedor -->
+  <div class="bg-zinc-800 p-6 rounded-2xl shadow-lg">
+    <h4 class="text-sm text-zinc-400">👥 Clientes por Vendedor</h4>
+    <ul class="mt-2 text-white text-sm space-y-1">
+      {% for c in clientes_por_vendedor %}
+      <li>
+        <span class="font-medium text-green-300">{{ c.creado_por__username }}</span>
+        – <span>{{ c.total }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
 
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-  <a href="{% url 'reporte_ventas_diarias' %}" class="bg-gray-800 p-6 rounded-lg shadow hover:bg-gray-700 transition">
-    <h3 class="text-xl font-semibold text-green-400 mb-2">📅 Ventas Diarias</h3>
-    <p class="text-gray-300">Consulta todas las ventas realizadas por día, con filtro de fechas y exportación a Excel.</p>
-  </a>
+  <!-- KPI: Ingresos Mensuales -->
+  <div class="bg-zinc-800 p-6 rounded-2xl shadow-lg flex flex-col">
+    <span class="text-sm text-zinc-400">📈 Ingresos Mes</span>
+    <span class="mt-2 text-3xl font-bold text-green-300">
+      ${{ ingresos_mes|formato_miles }}
+    </span>
+  </div>
 
-  <a href="{% url 'reporte_clientes_con_deuda' %}" class="bg-gray-800 p-6 rounded-lg shadow hover:bg-gray-700 transition">
-    <h3 class="text-xl font-semibold text-yellow-400 mb-2">💰 Clientes con Deuda</h3>
-    <p class="text-gray-300">Revisa qué clientes tienen saldos pendientes y cuánto deben.</p>
-  </a>
-
-  <a href="{% url 'reporte_productos_mas_vendidos' %}" class="bg-gray-800 p-6 rounded-lg shadow hover:bg-gray-700 transition">
-    <h3 class="text-xl font-semibold text-blue-400 mb-2">📦 Productos Más Vendidos</h3>
-    <p class="text-gray-300">Analiza los productos más vendidos en cualquier periodo de tiempo.</p>
-  </a>
+  <!-- KPI: Stock Bajo -->
+  <div class="bg-zinc-800 p-6 rounded-2xl shadow-lg flex flex-col">
+    <span class="text-sm text-zinc-400">🛒 Stock Bajo (≤5)</span>
+    <span class="mt-2 text-3xl font-bold text-red-400">{{ bajo_stock }}</span>
+  </div>
 </div>
+
+<div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <!-- Gráfica Ventas Semanales -->
+  <div class="bg-zinc-800 p-6 rounded-2xl shadow-lg">
+    <h3 class="text-lg font-semibold text-white mb-4">Ventas Última Semana</h3>
+    <canvas id="chartVentasSemana"></canvas>
+  </div>
+
+  <!-- Donut Tipos de Pago -->
+  <div class="bg-zinc-800 p-6 rounded-2xl shadow-lg">
+    <h3 class="text-lg font-semibold text-white mb-4">Tipos de Pago (últ. 30 días)</h3>
+    <canvas id="chartTiposPago"></canvas>
+  </div>
+</div>
+
+{# 1) Inyectamos los JSON seguros con json_script #}
+{{ fechas_semana|json_script:"ventas-semana-labels" }}
+{{ serie_ventas|json_script:"ventas-semana-values" }}
+{{ labels_pagos|json_script:"tipos-pago-labels" }}
+{{ datos_pagos|json_script:"tipos-pago-values" }}
+
+{# 2) Incluir Chart.js y leer esos JSON desde JS #}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Datos Ventas Semanales
+  const labelsSemana = JSON.parse(document.getElementById('ventas-semana-labels').textContent);
+  const datosSemana  = JSON.parse(document.getElementById('ventas-semana-values').textContent);
+
+  new Chart(
+    document.getElementById('chartVentasSemana').getContext('2d'),
+    {
+      type: 'bar',
+      data: {
+        labels: labelsSemana,
+        datasets: [{
+          label: 'Ventas',
+          data: datosSemana,
+          backgroundColor: 'rgba(34,197,94,0.7)'
+        }]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true }
+        }
+      }
+    }
+  );
+
+  // Datos Tipos de Pago
+  const labelsPago = JSON.parse(document.getElementById('tipos-pago-labels').textContent);
+  const datosPago  = JSON.parse(document.getElementById('tipos-pago-values').textContent);
+
+  new Chart(
+    document.getElementById('chartTiposPago').getContext('2d'),
+    {
+      type: 'doughnut',
+      data: {
+        labels: labelsPago,
+        datasets: [{ data: datosPago }]
+      },
+      options: {
+        plugins: {
+          legend: { position: 'bottom' }
+        }
+      }
+    }
+  );
+</script>
 {% endblock %}
