@@ -58,12 +58,12 @@ urlpatterns = [
     ),
     path(
         "panel-admin/ventas/<int:venta_id>/detalle/",
-        views.venta_admin_detail,
+        views.detalle_venta,
         name="venta_admin_detail",
     ),
     path(
         "panel-vendedor/ventas/<int:venta_id>/detalle/",
-        views.venta_vendedor_detail,
+        views.detalle_venta,
         name="venta_vendedor_detail",
     ),
     path("ventas/<int:venta_id>/anular/", venta_delete, name="venta_delete"),
