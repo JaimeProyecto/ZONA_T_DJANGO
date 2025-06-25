@@ -1,43 +1,110 @@
 {% extends 'core/base_dashboard.html' %}
-{% block title %}Clientes con Deuda – ZONA T{% endblock %}
-{% block header %}Reporte: Clientes con Deuda{% endblock %}
+{% block title %}Saldos Pendientes – ZONA T{% endblock %}
+{% block header %}Reporte: Saldos Pendientes{% endblock %}
 {% load miles %}
 
 {% block content %}
-<div class="max-w-5xl mx-auto mt-10 bg-zinc-800 text-white p-6 rounded-2xl shadow-lg">
-  <h2 class="text-2xl font-bold text-red-400 mb-6">💸 Clientes con Deudas</h2>
+<div class="max-w-6xl mx-auto mt-10 bg-zinc-800 text-white p-6 rounded-2xl shadow-lg">
+  <h2 class="text-2xl font-bold text-red-400 mb-6">💸 Saldos Pendientes</h2>
 
   <div class="mb-6 flex justify-between items-center">
+    <!-- Buscador -->
     <form method="get" class="flex space-x-2">
-      <input type="text" name="q" placeholder="Buscar cliente..." value="{{ request.GET.q }}" class="rounded px-4 py-2 bg-zinc-900 border border-zinc-600 text-white" />
-      <button type="submit" class="bg-green-600 text-black font-bold px-4 py-2 rounded hover:bg-green-700">🔍 Buscar</button>
+      <input
+        type="text"
+        name="q"
+        placeholder="Buscar por cliente o factura..."
+        value="{{ request.GET.q }}"
+        class="rounded px-4 py-2 bg-zinc-900 border border-zinc-600 text-white"
+      />
+      <button
+        type="submit"
+        class="bg-green-600 text-black font-bold px-4 py-2 rounded hover:bg-green-700"
+      >🔍 Buscar</button>
     </form>
-    <a href="{% url 'exportar_clientes_deuda_excel' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">📤 Exportar a Excel</a>
+
+    <!-- Exportar a Excel -->
+    <a
+      href="{% url 'exportar_clientes_deuda_excel' %}"
+      class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+    >📤 Exportar a Excel</a>
   </div>
 
   <table class="w-full bg-zinc-900 rounded text-white text-sm">
     <thead>
       <tr class="bg-zinc-700 text-left">
+        <th class="p-3">Factura</th>
         <th class="p-3">Cliente</th>
-        <th class="p-3">Teléfono</th>
-        <th class="p-3">Ciudad</th>
-        <th class="p-3">Deuda ($)</th>
+        <th class="p-3">Total Compra</th>
+        <th class="p-3">Saldo Pendiente</th>
+        <th class="p-3">Monto Último Abono</th>
+        <th class="p-3">Registrado Por</th>
+        <th class="p-3">Fecha/Hora Abono</th>
+        <th class="p-3">Acción</th>
       </tr>
     </thead>
     <tbody>
-      {% for cliente in clientes %}
+      {% for rep in clientes %}
         <tr class="border-t border-zinc-700 hover:bg-zinc-800 transition">
-          <td class="p-3">{{ cliente.nombre }}</td>
-          <td class="p-3">{{ cliente.telefono }}</td>
-          <td class="p-3">{{ cliente.ciudad }}</td>
-          <td class="p-3 text-red-400 font-semibold">${{ cliente.deuda_total|formato_miles }}</td>
+          <!-- Número de factura -->
+          <td class="p-3">
+            <a
+              href="{% url 'factura_detalle' rep.factura_id %}"
+              class="text-blue-400 hover:underline"
+            >{{ rep.factura_numero }}</a>
+          </td>
+
+          <!-- Nombre del cliente -->
+          <td class="p-3">{{ rep.cliente_nombre }}</td>
+
+          <!-- Total de la compra -->
+          <td class="p-3">
+            ${{ rep.total_compra|formato_miles }}
+          </td>
+
+          <!-- Saldo pendiente -->
+          <td class="p-3 text-yellow-300 font-semibold">
+            ${{ rep.saldo_pendiente|formato_miles }}
+          </td>
+
+          <!-- Monto del último abono -->
+          <td class="p-3">
+            ${{ rep.monto_ultimo_abono|formato_miles }}
+          </td>
+
+          <!-- Usuario que registró ese último abono -->
+          <td class="p-3">{{ rep.registrado_por }}</td>
+
+          <!-- Fecha y hora del último abono -->
+          <td class="p-3">
+            {{ rep.fecha_hora_abono|date:"d/m/Y H:i" }}
+          </td>
+
+          <!-- Acción: abonar -->
+          <td class="p-3">
+            <a
+              href="{% url 'abonar_factura' rep.factura_id %}"
+              class="text-pink-500 font-bold hover:text-pink-400"
+            >➕ Abonar</a>
+          </td>
         </tr>
       {% empty %}
         <tr>
-          <td colspan="4" class="text-center text-zinc-400 py-4">No hay clientes con deudas.</td>
+          <td colspan="8" class="text-center text-zinc-400 py-4">
+            No hay saldos pendientes.
+          </td>
         </tr>
       {% endfor %}
     </tbody>
+    <tfoot>
+      <tr class="border-t border-zinc-700">
+        <td colspan="6"></td>
+        <td class="p-3 text-right font-bold">Total Deuda:</td>
+        <td class="p-3 text-yellow-300 font-bold">
+          ${{ total_deuda|formato_miles }}
+        </td>
+      </tr>
+    </tfoot>
   </table>
 </div>
 {% endblock %}
