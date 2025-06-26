@@ -118,31 +118,98 @@ def admin_dashboard(request):
     return render(request, "core/admin/admin_dashboard.html", context)
 
 
+# core/views.py
 @login_required
 @user_passes_test(es_vendedor, login_url="login")
 def vendedor_dashboard(request):
-    """
-    Panel de vendedor con KPIs, mini–charts y listados.
-    """
     hoy = date.today()
 
-    # 1️⃣ Ventas diarias últimos 7 días (solo propias y activas)
-    fechas_semana = [hoy - timedelta(days=i) for i in range(6, -1, -1)]
-    ventas_semana_qs = (
+    # — Ventas de hoy —
+    ventas_hoy_qs = Venta.objects.filter(
+        usuario=request.user, fecha__date=hoy, estado="activa"
+    )
+    ventas_hoy_count = ventas_hoy_qs.count()
+    ventas_hoy_total = ventas_hoy_qs.aggregate(total=Sum("total"))["total"] or 0
+
+    # — Abonos pendientes (ventas a crédito con saldo > 0) —
+    ventas_credito = Venta.objects.filter(
+        usuario=request.user, tipo_pago="credito", estado="activa"
+    )
+    abonos_pendientes = []
+    for v in ventas_credito:
+        saldo = v.calcular_saldo_pendiente()
+        if saldo > 0:
+            abonos_pendientes.append(
+                {
+                    "factura": v.numero_factura,
+                    "cliente": v.cliente.nombre,
+                    "saldo": saldo,
+                }
+            )
+    abonos_pendientes_count = len(abonos_pendientes)
+
+    # — Productos agotándose (stock ≤5) de los que ha vendido —
+    prod_ids_vend = (
+        VentaItem.objects.filter(venta__usuario=request.user)
+        .values_list("producto_id", flat=True)
+        .distinct()
+    )
+    productos_criticos = Product.objects.filter(
+        id__in=prod_ids_vend, stock__lte=5
+    ).values("reference", "description", "stock")
+    productos_agotandose_count = productos_criticos.count()
+
+    # — Top 5 clientes por ventas del mes —
+    primer_dia_mes = hoy.replace(day=1)
+    clientes_mes = (
         Venta.objects.filter(
-            usuario=request.user,
-            estado="activa",
-            fecha__date__gte=hoy - timedelta(days=6),
+            usuario=request.user, fecha__date__gte=primer_dia_mes, estado="activa"
+        )
+        .values("cliente__nombre")
+        .annotate(total_mes=Sum("total"))
+        .order_by("-total_mes")[:5]
+    )
+    top_clients = [
+        {"nombre": c["cliente__nombre"], "total": c["total_mes"]} for c in clientes_mes
+    ]
+
+    # — Productos más vendidos última semana —
+    semana_atras = hoy - timedelta(days=6)
+    productos_semana_qs = (
+        VentaItem.objects.filter(
+            venta__usuario=request.user,
+            venta__fecha__date__gte=semana_atras,
+            venta__estado="activa",
+        )
+        .values("producto__reference", "producto__description")
+        .annotate(cantidad=Sum("cantidad"))
+        .order_by("-cantidad")[:5]
+    )
+    productos_mas_vendidos = [
+        {
+            "reference": p["producto__reference"],
+            "description": p["producto__description"],
+            "cantidad": p["cantidad"],
+        }
+        for p in productos_semana_qs
+    ]
+
+    # — Gráfico Ventas últimos 7 días —
+    fechas = [hoy - timedelta(days=i) for i in range(6, -1, -1)]
+    ventas_semana = (
+        Venta.objects.filter(
+            usuario=request.user, fecha__date__gte=semana_atras, estado="activa"
         )
         .annotate(dia=TruncDate("fecha"))
         .values("dia")
         .annotate(total_dia=Sum("total"))
         .order_by("dia")
     )
-    mapa = {v["dia"].strftime("%Y-%m-%d"): v["total_dia"] for v in ventas_semana_qs}
-    serie_ventas = [mapa.get(d.strftime("%Y-%m-%d"), 0) for d in fechas_semana]
+    mapa = {v["dia"].strftime("%d/%m"): float(v["total_dia"]) for v in ventas_semana}
+    fechas_semana = [d.strftime("%d/%m") for d in fechas]
+    serie_ventas = [mapa.get(label, 0) for label in fechas_semana]
 
-    # 2️⃣ Proporción por tipo de pago en últimos 30 días
+    # — Gráfico Tipos de pago (últ. 30 días) —
     pagos_qs = (
         Venta.objects.filter(
             usuario=request.user, fecha__date__gte=hoy - timedelta(days=30)
@@ -153,59 +220,22 @@ def vendedor_dashboard(request):
     labels_pagos = [p["tipo_pago"].capitalize() for p in pagos_qs]
     datos_pagos = [p["cantidad"] for p in pagos_qs]
 
-    # 3️⃣ KPI: Ventas Hoy
-    ventas_hoy = Venta.objects.filter(
-        usuario=request.user, fecha__date=hoy, estado="activa"
-    )
-    ventas_hoy_count = ventas_hoy.count()
-    ventas_hoy_total = ventas_hoy.aggregate(total=Sum("total"))["total"] or 0
-
-    # 4️⃣ KPI: Ingresos Mes
-    ingresos_mes = (
-        Venta.objects.filter(
-            usuario=request.user,
-            fecha__year=hoy.year,
-            fecha__month=hoy.month,
-            estado="activa",
-        ).aggregate(total=Sum("total"))["total"]
-        or 0
-    )
-
-    # 5️⃣ KPI: Abonos Pendientes (crédito con saldo > 0)
-    creditos = Venta.objects.filter(
-        usuario=request.user, tipo_pago="credito", estado="activa"
-    )
-    abonos_pendientes = sum(1 for v in creditos if v.calcular_saldo_pendiente() > 0)
-
-    # 6️⃣ KPI: Productos Agotándose (top 5 vendidos con stock ≤ 5)
-    top_productos = (
-        VentaItem.objects.filter(venta__usuario=request.user)
-        .values("producto")
-        .annotate(total_vend=Sum("cantidad"))
-        .order_by("-total_vend")[:5]
-    )
-    prod_ids = [p["producto"] for p in top_productos]
-    mis_bajo_stock_count = Product.objects.filter(id__in=prod_ids, stock__lte=5).count()
-
-    # 7️⃣ Últimas 5 ventas
-    ventas_recientes = Venta.objects.filter(usuario=request.user).order_by("-fecha")[:5]
-
-    return render(
-        request,
-        "core/vendedor/vendedor_dashboard.html",
-        {
-            "fechas_semana": [d.strftime("%d/%m") for d in fechas_semana],
-            "serie_ventas": serie_ventas,
-            "labels_pagos": labels_pagos,
-            "datos_pagos": datos_pagos,
-            "ventas_hoy_count": ventas_hoy_count,
-            "ventas_hoy_total": ventas_hoy_total,
-            "ingresos_mes": ingresos_mes,
-            "abonos_pendientes": abonos_pendientes,
-            "mis_bajo_stock_count": mis_bajo_stock_count,
-            "ventas_recientes": ventas_recientes,
-        },
-    )
+    # Serializamos los arrays para Chart.js
+    context = {
+        "ventas_hoy_count": ventas_hoy_count,
+        "ventas_hoy_total": ventas_hoy_total,
+        "abonos_pendientes": abonos_pendientes,
+        "abonos_pendientes_count": abonos_pendientes_count,
+        "productos_criticos": productos_criticos,
+        "productos_agotandose_count": productos_agotandose_count,
+        "top_clients": top_clients,
+        "productos_mas_vendidos": productos_mas_vendidos,
+        "fechas_semana_json": json.dumps(fechas_semana),
+        "serie_ventas_json": json.dumps(serie_ventas),
+        "labels_pagos_json": json.dumps(labels_pagos),
+        "datos_pagos_json": json.dumps(datos_pagos),
+    }
+    return render(request, "core/vendedor/vendedor_dashboard.html", context)
 
 
 # --- CRUD Productos ---
