@@ -16,8 +16,8 @@
          class="bg-green-500 hover:bg-green-600 text-black font-bold py-2 px-4 rounded">
         ➕ Registrar cliente
       </a>
-      <a href="{% url 'exportar_clientes_excel' %}?q={{ query }}"
-         class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded">
+      <a href="{% url 'exportar_ventas_excel_vendedor' %}?q={{ query }}&fecha_inicio={{ fecha_inicio }}&fecha_fin={{ fecha_fin }}"
+        class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded font-bold">
         📤 Exportar a Excel
       </a>
     </div>
