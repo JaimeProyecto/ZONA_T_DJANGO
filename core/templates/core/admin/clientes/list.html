@@ -1,3 +1,4 @@
+{# core/templates/core/admin/clientes/list.html #}
 {% extends 'core/base_dashboard.html' %}
 {% load widget_tweaks %}
 {% block title %}Clientes – ZONA T{% endblock %}
@@ -23,14 +24,18 @@
   </div>
 
   <!-- Buscador -->
-  <form method="GET" class="mb-6">
+  <form method="GET" class="mb-6 flex space-x-2">
     <input
       type="text"
       name="q"
-      placeholder="Buscar por nombre o cédula..."
+      placeholder="Buscar por nombre, cédula o correo..."
       value="{{ query }}"
-      class="w-full md:w-96 px-4 py-2 rounded-lg bg-zinc-800 text-white placeholder-zinc-400 border border-zinc-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+      class="flex-1 px-4 py-2 rounded-lg bg-zinc-800 text-white placeholder-zinc-400 border border-zinc-600 focus:outline-none focus:ring-2 focus:ring-green-500"
     />
+    <button type="submit"
+            class="bg-green-600 hover:bg-green-700 text-black px-4 py-2 rounded">
+      🔍 Buscar
+    </button>
   </form>
 
   <!-- Tabla -->
@@ -41,6 +46,7 @@
           <th class="px-4 py-2">#</th>
           <th class="px-4 py-2">Nombre</th>
           <th class="px-4 py-2">Teléfono</th>
+          <th class="px-4 py-2">Correo</th>
           <th class="px-4 py-2">Dirección</th>
           <th class="px-4 py-2 text-right">Acciones</th>
         </tr>
@@ -51,6 +57,7 @@
           <td class="px-4 py-2">{{ cliente.id }}</td>
           <td class="px-4 py-2">{{ cliente.nombre }}</td>
           <td class="px-4 py-2">{{ cliente.telefono }}</td>
+          <td class="px-4 py-2">{{ cliente.email }}</td>
           <td class="px-4 py-2">{{ cliente.direccion }}</td>
           <td class="px-4 py-2 text-right space-x-2 whitespace-nowrap">
             <a href="{% url 'cliente_historial' cliente.id %}"
@@ -63,7 +70,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="5" class="px-4 py-4 text-center text-zinc-400">
+          <td colspan="6" class="px-4 py-4 text-center text-zinc-400">
             No hay clientes registrados.
           </td>
         </tr>
@@ -72,7 +79,7 @@
     </table>
   </div>
 
-  {# Aquí podrías agregar totales si tuvieras, por ejemplo, conteo total de clientes: #}
+  <!-- Total de clientes -->
   <div class="mt-4 text-white">
     <p>Total de clientes: <span class="font-semibold">{{ clientes|length }}</span></p>
   </div>
