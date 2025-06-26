@@ -1303,7 +1303,7 @@ def exportar_clientes_excel(request):
 
     # 4) Cabecera
     ws.append(
-        ["ID", "Nombre", "Cédula", "Teléfono", "Dirección", "Email", "Creado Por"]
+        ["ID", "Nombre", "Cédula", "Teléfono", "Dirección", "correo", "Creado Por"]
     )
 
     # 5) Filas de datos
@@ -1315,7 +1315,7 @@ def exportar_clientes_excel(request):
                 c.cedula,
                 c.telefono,
                 c.direccion,
-                c.email or "",
+                c.correo or "",
                 c.creado_por.username if c.creado_por else "",
             ]
         )
