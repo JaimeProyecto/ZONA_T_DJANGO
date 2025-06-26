@@ -62,18 +62,15 @@ def admin_dashboard(request):
     • Productos con stock bajo
     • Gráficos de ventas semanales y proporción de tipos de pago
     """
-    # Fecha de hoy
     hoy = date.today()
 
-    # --- KPI: Clientes por vendedor ---
+    # KPI: Clientes por vendedor
     clientes_por_vendedor = Cliente.objects.values("creado_por__username").annotate(
         total=Count("id")
     )
 
-    # --- Gráfico 1: Ventas últimos 7 días ---
-    # 1. Generar lista de fechas (hoy y 6 días atrás)
+    # Gráfico 1: Ventas últimos 7 días
     fechas = [hoy - timedelta(days=i) for i in range(6, -1, -1)]
-    # 2. Agrupar ventas activas por día
     ventas_semana_qs = (
         Venta.objects.filter(fecha__date__gte=hoy - timedelta(days=6), estado="activa")
         .annotate(dia=TruncDate("fecha"))
@@ -81,33 +78,33 @@ def admin_dashboard(request):
         .annotate(total_dia=Sum("total"))
         .order_by("dia")
     )
-    # 3. Mapear fecha->total
     mapa_semana = {v["dia"].strftime("%d/%m"): v["total_dia"] for v in ventas_semana_qs}
-    # 4. Construir listas para la gráfica
     fechas_semana = [d.strftime("%d/%m") for d in fechas]
-    serie_ventas = [mapa_semana.get(label, 0) for label in fechas_semana]
+    # Convertimos a float para que json.dumps funcione
+    serie_ventas = [float(mapa_semana.get(label, 0)) for label in fechas_semana]
 
-    # --- Gráfico 2: Proporción de tipos de pago (últ. 30 días) ---
+    # Gráfico 2: Proporción de tipos de pago (últ. 30 días)
     pagos_qs = (
         Venta.objects.filter(fecha__date__gte=hoy - timedelta(days=30))
         .values("tipo_pago")
         .annotate(cantidad=Count("id"))
     )
     labels_pagos = [p["tipo_pago"].capitalize() for p in pagos_qs]
-    datos_pagos = [p["cantidad"] for p in pagos_qs]
+    datos_pagos = [p["cantidad"] for p in pagos_qs]  # son ints, no hay problema
 
-    # --- KPI: Ingresos del mes actual ---
+    # KPI: Ingresos del mes actual
     ingresos_mes = (
         Venta.objects.filter(
             fecha__year=hoy.year, fecha__month=hoy.month, estado="activa"
         ).aggregate(total=Sum("total"))["total"]
         or 0
     )
+    # ingresos_mes también es Decimal, pero lo mostramos en plantilla, no lo serializamos a JSON
 
-    # --- KPI: Productos con stock bajo ---
+    # KPI: Productos con stock bajo
     bajo_stock = Product.objects.filter(stock__lte=5).count()
 
-    # --- Serializar listas a JSON para inyección segura en JS ---
+    # Serializamos las listas a JSON ya limpias
     context = {
         "clientes_por_vendedor": clientes_por_vendedor,
         "ingresos_mes": ingresos_mes,
