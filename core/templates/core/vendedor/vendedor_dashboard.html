@@ -1,7 +1,8 @@
+{# core/templates/core/vendedor/vendedor_dashboard.html #}
 {% extends 'core/base_dashboard.html' %}
 {% block title %}Panel Vendedor – ZONA T{% endblock %}
 {% block header %}Panel de Vendedor{% endblock %}
-{% load miles json_script %}
+{% load miles static %}
 
 {% block content %}
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -12,88 +13,83 @@
     <span class="text-lg text-green-400">${{ ventas_hoy_total|formato_miles }}</span>
   </div>
 
-  <!-- KPI: Ingresos Mes -->
-  <div class="bg-zinc-800 p-6 rounded-2xl shadow-lg">
-    <span class="text-sm text-zinc-400">📈 Ingresos Mes</span>
-    <span class="block mt-2 text-3xl font-bold text-blue-300">${{ ingresos_mes|formato_miles }}</span>
-  </div>
-
   <!-- KPI: Abonos Pendientes -->
   <div class="bg-zinc-800 p-6 rounded-2xl shadow-lg">
     <span class="text-sm text-zinc-400">💳 Abonos Pendientes</span>
-    <span class="block mt-2 text-3xl font-bold text-yellow-300">{{ abonos_pendientes }}</span>
+    <span class="block mt-2 text-3xl font-bold text-yellow-300">{{ abonos_pendientes_count }}</span>
   </div>
 
   <!-- KPI: Productos Agotándose -->
   <div class="bg-zinc-800 p-6 rounded-2xl shadow-lg">
     <span class="text-sm text-zinc-400">🔥 Productos Agotándose</span>
-    <span class="block mt-2 text-3xl font-bold text-red-400">{{ mis_bajo_stock_count }}</span>
+    <span class="block mt-2 text-3xl font-bold text-red-400">{{ productos_agotandose_count }}</span>
   </div>
 </div>
 
 <div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
-  <!-- Gráfica Ventas Semanales -->
+  <!-- Gráfica: Ventas Semanales -->
   <div class="bg-zinc-800 p-6 rounded-2xl shadow-lg">
     <h3 class="text-lg font-semibold text-white mb-4">Ventas Última Semana</h3>
-    <canvas id="chartVentasSemana"></canvas>
+    <canvas id="chartVentasSemana" height="200"></canvas>
   </div>
 
-  <!-- Donut Tipos de Pago -->
+  <!-- Gráfica: Tipos de Pago -->
   <div class="bg-zinc-800 p-6 rounded-2xl shadow-lg">
-    <h3 class="text-lg font-semibold text-white mb-4">Tipos de Pago (30 días)</h3>
-    <canvas id="chartTiposPago"></canvas>
+    <h3 class="text-lg font-semibold text-white mb-4">Tipos de Pago (últ. 30 días)</h3>
+    <canvas id="chartTiposPago" height="200"></canvas>
   </div>
 </div>
 
-<div class="mt-8">
-  <h3 class="text-lg font-semibold text-white mb-2">Últimas Ventas</h3>
-  <ul class="space-y-2 text-sm text-white">
-    {% for v in ventas_recientes %}
-    <li>
-      <a href="{% url 'venta_vendedor_detail' v.id %}" class="font-medium text-blue-400">
-        #{{ v.numero_factura }}
-      </a>
-      – ${{ v.total|formato_miles }}
-      <span class="text-xs">({{ v.fecha|date:"d/m H:i" }})</span>
-    </li>
-    {% endfor %}
-  </ul>
-</div>
-
-<div class="mt-8 flex flex-wrap gap-4">
-  <a href="{% url 'venta_create' %}" class="bg-blue-600 text-white px-6 py-3 rounded font-bold">
-    ➕ Registrar Venta
-  </a>
-  <a href="{% url 'saldo_pendiente' %}" class="bg-yellow-600 text-black px-6 py-3 rounded font-bold">
-    📊 Saldo Pendiente
-  </a>
-  <a href="{% url 'cliente_historial' ventas_recientes.0.cliente.id %}" class="bg-indigo-600 text-white px-6 py-3 rounded font-bold">
-    🔍 Historial Cliente
-  </a>
-</div>
-
-{# JSON seguros para Chart.js #}
-{{ fechas_semana|json_script:"ventas-semana-labels" }}
-{{ serie_ventas|json_script:"ventas-semana-values" }}
-{{ labels_pagos|json_script:"tipos-pago-labels" }}
-{{ datos_pagos|json_script:"tipos-pago-values" }}
+{# Inyectamos las variables JSON pasadas desde la vista #}
+<script>
+  const fechasSemana = {{ fechas_semana_json|safe }};
+  const serieVentas   = {{ serie_ventas_json|safe }};
+  const labelsPagos   = {{ labels_pagos_json|safe }};
+  const datosPagos    = {{ datos_pagos_json|safe }};
+</script>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  // Ventas semanales
-  const labelsSemana = JSON.parse(document.getElementById('ventas-semana-labels').textContent);
-  const datosSemana  = JSON.parse(document.getElementById('ventas-semana-values').textContent);
+  // Barra de Ventas Semanales
   new Chart(
-    document.getElementById('chartVentasSemana'),
-    { type: 'bar', data: { labels: labelsSemana, datasets: [{ label: 'Ventas', data: datosSemana, backgroundColor: 'rgba(34,197,94,0.7)' }] }, options: { scales: { y: { beginAtZero: true } } } }
+    document.getElementById('chartVentasSemana').getContext('2d'),
+    {
+      type: 'bar',
+      data: {
+        labels: fechasSemana,
+        datasets: [{
+          label: 'Ventas',
+          data: serieVentas,
+          backgroundColor: 'rgba(34,197,94,0.7)'
+        }]
+      },
+      options: {
+        scales: { y: { beginAtZero: true } },
+        plugins: { legend: { display: false } }
+      }
+    }
   );
 
-  // Tipos de Pago doughnut
-  const labelsPago = JSON.parse(document.getElementById('tipos-pago-labels').textContent);
-  const datosPago  = JSON.parse(document.getElementById('tipos-pago-values').textContent);
+  // Donut de Tipos de Pago
   new Chart(
-    document.getElementById('chartTiposPago'),
-    { type: 'doughnut', data: { labels: labelsPago, datasets: [{ data: datosPago }] }, options: { plugins: { legend: { position: 'bottom' } } } }
+    document.getElementById('chartTiposPago').getContext('2d'),
+    {
+      type: 'doughnut',
+      data: {
+        labels: labelsPagos,
+        datasets: [{
+          data: datosPagos,
+          backgroundColor: [
+            'rgba(34,197,94,0.7)',
+            'rgba(59,130,246,0.7)',
+            'rgba(234,179,8,0.7)'
+          ]
+        }]
+      },
+      options: {
+        plugins: { legend: { position: 'bottom', labels: { color: '#FFF' } } }
+      }
+    }
   );
 </script>
 {% endblock %}
