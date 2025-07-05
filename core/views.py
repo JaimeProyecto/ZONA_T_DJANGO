@@ -1244,35 +1244,93 @@ def exportar_ventas_excel_vendedor(request):
     return response
 
 
+def limpiar_valor(valor):
+    """
+    Limpia signos de moneda y retorna float o 0 si no se puede parsear.
+    """
+    if isinstance(valor, (int, float)):
+        return valor
+    s = (
+        str(valor)
+        .replace("$", "")
+        .replace(",", "")
+        .replace("(", "-")
+        .replace(")", "")
+        .strip()
+    )
+    try:
+        return float(s)
+    except ValueError:
+        return 0.0
+
+
+@login_required
+@user_passes_test(es_vendedor, login_url="login")
 def cargar_productos_excel(request):
     if request.method == "POST" and request.FILES.get("archivo"):
         archivo = request.FILES["archivo"]
+        try:
+            wb = openpyxl.load_workbook(archivo)
+        except Exception as e:
+            messages.error(request, f"Error al leer el archivo Excel: {e}")
+            return redirect("cargar_productos")
 
-        wb = openpyxl.load_workbook(archivo)
         hoja = wb.active
+        procesados = 0
+        omitidos = 0
 
-        for fila in hoja.iter_rows(min_row=2, values_only=True):
-            referencia, descripcion, valor_compra, precio, stock = fila
+        for idx, fila in enumerate(
+            hoja.iter_rows(min_row=2, values_only=True), start=2
+        ):
+            # Convertimos a lista para chequear longitud
+            vals = list(fila)
 
-            # Limpiar valores contables o con formato
+            # Si tiene <4 columnas, omitimos
+            if len(vals) < 4:
+                omitidos += 1
+                continue
+
+            # Siempre hay al menos 4 columnas:
+            referencia = vals[0]
+            descripcion = vals[1]
+            valor_compra = vals[2]
+            # puede venir un precio de venta extra
+            if len(vals) >= 5:
+                precio = vals[3]
+                stock = vals[4]
+            else:
+                precio = vals[2]  # si no hay precio, lo igualamos al costo
+                stock = vals[3]
+
+            # limpiamos los valores
             valor_compra = limpiar_valor(valor_compra)
             precio = limpiar_valor(precio)
-            stock = int(limpiar_valor(stock))
+            try:
+                stock = int(limpiar_valor(stock))
+            except Exception:
+                stock = 0
 
-            # Validar que el stock no sea negativo
+            # validación mínima
             if stock < 0:
-                continue  # puedes usar messages.warning para avisar si quieres
+                omitidos += 1
+                continue
 
+            # creamos o actualizamos
             Product.objects.update_or_create(
                 reference=referencia,
                 defaults={
-                    "description": descripcion,
+                    "description": descripcion or "",
                     "purchase_price": valor_compra,
+                    # si tu modelo tiene un campo 'price' o similar, úsalo:
+                    # "sale_price":       precio,
                     "stock": stock,
                 },
             )
+            procesados += 1
 
-        messages.success(request, "Productos cargados correctamente.")
+        messages.success(
+            request, f"✅ Productos cargados: {procesados}. Filas omitidas: {omitidos}."
+        )
         return redirect("admin_product_list")
 
     return render(request, "core/admin/products/cargar_productos.html")

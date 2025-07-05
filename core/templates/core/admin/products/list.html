@@ -50,6 +50,12 @@
         <td class="py-2 px-4 border-b border-zinc-700">{{ product.stock }}</td>
         <td class="py-2 px-4 border-b border-zinc-700">
           <a href="{% url 'product_edit' product.id %}" class="text-green-400 hover:underline">✏️ Editar</a>
+          <form action="{% url 'product_delete' product.id %}" method="post"
+                onsubmit="return confirm('¿Eliminar producto {{ product.reference }}?');">
+            {% csrf_token %}
+            <button type="submit"
+                    class="text-red-500 hover:underline">🗑 Eliminar</button>
+          </form>
         </td>
       </tr>
       {% empty %}
