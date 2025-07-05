@@ -1268,7 +1268,6 @@ def cargar_productos_excel(request):
                 defaults={
                     "description": descripcion or "",
                     "purchase_price": costo,
-                    "sale_price": costo,  # <--- igualamos al costo
                     "stock": stock,
                 },
             )
