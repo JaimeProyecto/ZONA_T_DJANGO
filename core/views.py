@@ -1188,26 +1188,6 @@ def vista_reportes(request):
     return render(request, "core/admin/reportes/reportes_inicio.html")
 
 
-# carga masiva
-
-
-def limpiar_valor(valor):
-    if isinstance(valor, (int, float)):
-        return valor
-    valor_str = (
-        str(valor)
-        .replace("$", "")
-        .replace(",", "")
-        .replace("(", "-")
-        .replace(")", "")
-        .strip()
-    )
-    try:
-        return float(valor_str)
-    except ValueError:
-        return 0  # O puedes usar: raise ValueError("Valor inválido en Excel")
-
-
 @login_required
 @user_passes_test(es_vendedor, login_url="login")
 def exportar_ventas_excel_vendedor(request):
@@ -1244,72 +1224,58 @@ def exportar_ventas_excel_vendedor(request):
     return response
 
 
+# carga masiva
+def limpiar_valor(valor):
+    """
+    Quita símbolos y comas y devuelve float o 0.0 si no se puede parsear.
+    """
+    if isinstance(valor, (int, float)):
+        return float(valor)
+    s = str(valor).replace("$", "").replace(",", "").strip()
+    try:
+        return float(s)
+    except ValueError:
+        return 0.0
+
+
 @login_required
 @user_passes_test(es_admin, login_url="login")
 def cargar_productos_excel(request):
     if request.method == "POST" and request.FILES.get("archivo"):
-        archivo = request.FILES["archivo"]
-        try:
-            wb = openpyxl.load_workbook(archivo)
-        except Exception as e:
-            messages.error(request, f"Error al leer el archivo Excel: {e}")
-            return redirect("cargar_productos")
-
+        wb = openpyxl.load_workbook(request.FILES["archivo"])
         hoja = wb.active
-        procesados = 0
-        omitidos = 0
+        ok = 0
+        saltos = 0
 
-        for idx, fila in enumerate(
-            hoja.iter_rows(min_row=2, values_only=True), start=2
-        ):
-            # Convertimos a lista para chequear longitud
-            vals = list(fila)
-
-            # Si tiene <4 columnas, omitimos
-            if len(vals) < 4:
-                omitidos += 1
-                continue
-
-            # Siempre hay al menos 4 columnas:
-            referencia = vals[0]
-            descripcion = vals[1]
-            valor_compra = vals[2]
-            # puede venir un precio de venta extra
-            if len(vals) >= 5:
-                precio = vals[3]
-                stock = vals[4]
-            else:
-                precio = vals[2]  # si no hay precio, lo igualamos al costo
-                stock = vals[3]
-
-            # limpiamos los valores
-            valor_compra = limpiar_valor(valor_compra)
-            precio = limpiar_valor(precio)
+        for fila in hoja.iter_rows(min_row=2, values_only=True):
+            # tu Excel tiene 4 columnas: referencia, descripción, costo y stock
             try:
-                stock = int(limpiar_valor(stock))
-            except Exception:
-                stock = 0
-
-            # validación mínima
-            if stock < 0:
-                omitidos += 1
+                referencia, descripcion, costo, stock = fila
+            except ValueError:
+                saltos += 1
                 continue
 
-            # creamos o actualizamos
+            costo = limpiar_valor(costo)
+            stock = int(limpiar_valor(stock))
+
+            if stock < 0:
+                saltos += 1
+                continue
+
+            # Importante: como no traes sale_price, lo igualamos al costo
             Product.objects.update_or_create(
                 reference=referencia,
                 defaults={
                     "description": descripcion or "",
-                    "purchase_price": valor_compra,
-                    # si tu modelo tiene un campo 'price' o similar, úsalo:
-                    # "sale_price":       precio,
+                    "purchase_price": costo,
+                    "sale_price": costo,  # <--- igualamos al costo
                     "stock": stock,
                 },
             )
-            procesados += 1
+            ok += 1
 
         messages.success(
-            request, f"✅ Productos cargados: {procesados}. Filas omitidas: {omitidos}."
+            request, f"✅ Importados: {ok} productos. Omitidos/errores: {saltos} filas."
         )
         return redirect("admin_product_list")
 
