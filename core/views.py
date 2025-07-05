@@ -994,25 +994,57 @@ def exportar_ventas_excel_vendedor(request):
     return response
 
 
+@login_required
+@user_passes_test(es_admin, login_url="login")
 def cargar_productos_excel(request):
+    """
+    Sube un XLSX con columnas:
+      1) referencia
+      2) descripción
+      3) valor_compra (puede venir con comas/miles)
+      4) stock
+    """
     if request.method == "POST" and request.FILES.get("archivo"):
         archivo = request.FILES["archivo"]
+        try:
+            wb = openpyxl.load_workbook(archivo)
+        except Exception:
+            messages.error(request, "No pude leer el archivo Excel.")
+            return redirect("admin_product_list")
 
-        wb = openpyxl.load_workbook(archivo)
         hoja = wb.active
-
+        filas_procesadas = 0
         for fila in hoja.iter_rows(min_row=2, values_only=True):
-            referencia, descripcion, valor_compra, precio, stock = fila
+            # Si la fila está completamente vacía, la saltamos
+            if not any(fila):
+                continue
 
-            # Limpiar valores contables o con formato
-            valor_compra = limpiar_valor(valor_compra)
-            precio = limpiar_valor(precio)
-            stock = int(limpiar_valor(stock))
+            # Asegurarnos de que tenga al menos 4 celdas
+            if len(fila) < 4:
+                messages.warning(
+                    request,
+                    f"Saltada fila {hoja.iter_rows().index(fila)+1}: columnas insuficientes.",
+                )
+                continue
 
-            # Validar que el stock no sea negativo
+            referencia, descripcion, valor_compra_raw, stock_raw = fila
+
+            # Limpiar y parsear los valores numéricos
+            try:
+                valor_compra = limpiar_valor(valor_compra_raw)
+                stock = int(limpiar_valor(stock_raw))
+            except Exception:
+                messages.warning(
+                    request,
+                    f"Saltada fila con referencia {referencia}: datos numéricos inválidos.",
+                )
+                continue
+
             if stock < 0:
-                continue  # puedes usar messages.warning para avisar si quieres
+                messages.warning(request, f"Saltada fila {referencia}: stock negativo.")
+                continue
 
+            # Actualiza o crea el producto (sin tocar sale_price)
             Product.objects.update_or_create(
                 reference=referencia,
                 defaults={
@@ -1021,8 +1053,12 @@ def cargar_productos_excel(request):
                     "stock": stock,
                 },
             )
+            filas_procesadas += 1
 
-        messages.success(request, "Productos cargados correctamente.")
+        messages.success(
+            request,
+            f"{filas_procesadas} productos cargados/actualizados correctamente.",
+        )
         return redirect("admin_product_list")
 
     return render(request, "core/admin/products/cargar_productos.html")
