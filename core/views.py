@@ -1,8 +1,9 @@
 import json
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 
 import openpyxl
+from escpos.printer import Usb as EscposUsb
 
 from django.conf import settings
 from django.contrib import messages
@@ -10,19 +11,25 @@ from django.contrib.auth import login as auth_login
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import AuthenticationForm
 from django.db import transaction
-from django.db.models import Sum, F, Q, Value, ExpressionWrapper, DecimalField, Count
-from django.db.models.functions import Coalesce
+from django.db.models import (
+    Count,
+    DecimalField,
+    ExpressionWrapper,
+    F,
+    FloatField,
+    Q,
+    Sum,
+    Value,
+)
+from django.db.models.functions import Coalesce, TruncDate
 from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 
-from escpos.printer import Usb as EscposUsb
-
-from .decorators import es_vendedor, es_admin
-
-from .forms import ProductForm, ClienteForm, AbonoForm
-from .models import Cliente, Product, Venta, VentaItem, Abono
+from .decorators import es_admin, es_vendedor
+from .forms import AbonoForm, ClienteForm, ProductForm
+from .models import Abono, Cliente, Product, Venta, VentaItem
 
 
 # --- Login y redirección por rol ---
@@ -42,32 +49,215 @@ def redirect_by_role(request):
     return redirect("vendedor_dashboard")
 
 
+# core/views.py
 @login_required
+@user_passes_test(es_admin, login_url="login")
 def admin_dashboard(request):
+    """
+    Panel de Control para administradores:
+    • Clientes por vendedor
+    • Ingresos del mes
+    • Productos con stock bajo
+    • Gráficos de ventas semanales y proporción de tipos de pago
+    """
+    hoy = date.today()
+
+    # KPI: Clientes por vendedor
     clientes_por_vendedor = Cliente.objects.values("creado_por__username").annotate(
         total=Count("id")
     )
-    return render(
-        request,
-        "core/admin/admin_dashboard.html",
-        {"clientes_por_vendedor": clientes_por_vendedor},
+
+    # Gráfico 1: Ventas últimos 7 días
+    fechas = [hoy - timedelta(days=i) for i in range(6, -1, -1)]
+    ventas_semana_qs = (
+        Venta.objects.filter(fecha__date__gte=hoy - timedelta(days=6), estado="activa")
+        .annotate(dia=TruncDate("fecha"))
+        .values("dia")
+        .annotate(total_dia=Sum("total"))
+        .order_by("dia")
     )
+    mapa_semana = {v["dia"].strftime("%d/%m"): v["total_dia"] for v in ventas_semana_qs}
+    fechas_semana = [d.strftime("%d/%m") for d in fechas]
+    # Convertimos a float para que json.dumps funcione
+    serie_ventas = [float(mapa_semana.get(label, 0)) for label in fechas_semana]
+
+    # Gráfico 2: Proporción de tipos de pago (últ. 30 días)
+    pagos_qs = (
+        Venta.objects.filter(fecha__date__gte=hoy - timedelta(days=30))
+        .values("tipo_pago")
+        .annotate(cantidad=Count("id"))
+    )
+    labels_pagos = [p["tipo_pago"].capitalize() for p in pagos_qs]
+    datos_pagos = [p["cantidad"] for p in pagos_qs]  # son ints, no hay problema
+
+    # KPI: Ingresos del mes actual
+    ingresos_mes = (
+        Venta.objects.filter(
+            fecha__year=hoy.year, fecha__month=hoy.month, estado="activa"
+        ).aggregate(total=Sum("total"))["total"]
+        or 0
+    )
+    # ingresos_mes también es Decimal, pero lo mostramos en plantilla, no lo serializamos a JSON
+
+    # KPI: Productos con stock bajo
+    bajo_stock = Product.objects.filter(stock__lte=5).count()
+
+    # Serializamos las listas a JSON ya limpias
+    context = {
+        "clientes_por_vendedor": clientes_por_vendedor,
+        "ingresos_mes": ingresos_mes,
+        "bajo_stock": bajo_stock,
+        "fechas_semana_json": json.dumps(fechas_semana),
+        "serie_ventas_json": json.dumps(serie_ventas),
+        "labels_pagos_json": json.dumps(labels_pagos),
+        "datos_pagos_json": json.dumps(datos_pagos),
+    }
+
+    return render(request, "core/admin/admin_dashboard.html", context)
 
 
+# core/views.py
 @login_required
+@user_passes_test(es_vendedor, login_url="login")
 def vendedor_dashboard(request):
-    return render(request, "core/vendedor/vendedor_dashboard.html")
+    hoy = date.today()
+
+    # — Ventas de hoy —
+    ventas_hoy_qs = Venta.objects.filter(
+        usuario=request.user, fecha__date=hoy, estado="activa"
+    )
+    ventas_hoy_count = ventas_hoy_qs.count()
+    ventas_hoy_total = ventas_hoy_qs.aggregate(total=Sum("total"))["total"] or 0
+
+    # — Abonos pendientes (ventas a crédito con saldo > 0) —
+    ventas_credito = Venta.objects.filter(
+        usuario=request.user, tipo_pago="credito", estado="activa"
+    )
+    abonos_pendientes = []
+    for v in ventas_credito:
+        saldo = v.calcular_saldo_pendiente()
+        if saldo > 0:
+            abonos_pendientes.append(
+                {
+                    "factura": v.numero_factura,
+                    "cliente": v.cliente.nombre,
+                    "saldo": saldo,
+                }
+            )
+    abonos_pendientes_count = len(abonos_pendientes)
+
+    # — Productos agotándose (stock ≤5) de los que ha vendido —
+    prod_ids_vend = (
+        VentaItem.objects.filter(venta__usuario=request.user)
+        .values_list("producto_id", flat=True)
+        .distinct()
+    )
+    productos_criticos = Product.objects.filter(
+        id__in=prod_ids_vend, stock__lte=5
+    ).values("reference", "description", "stock")
+    productos_agotandose_count = productos_criticos.count()
+
+    # — Top 5 clientes por ventas del mes —
+    primer_dia_mes = hoy.replace(day=1)
+    clientes_mes = (
+        Venta.objects.filter(
+            usuario=request.user, fecha__date__gte=primer_dia_mes, estado="activa"
+        )
+        .values("cliente__nombre")
+        .annotate(total_mes=Sum("total"))
+        .order_by("-total_mes")[:5]
+    )
+    top_clients = [
+        {"nombre": c["cliente__nombre"], "total": c["total_mes"]} for c in clientes_mes
+    ]
+
+    # — Productos más vendidos última semana —
+    semana_atras = hoy - timedelta(days=6)
+    productos_semana_qs = (
+        VentaItem.objects.filter(
+            venta__usuario=request.user,
+            venta__fecha__date__gte=semana_atras,
+            venta__estado="activa",
+        )
+        .values("producto__reference", "producto__description")
+        .annotate(cantidad=Sum("cantidad"))
+        .order_by("-cantidad")[:5]
+    )
+    productos_mas_vendidos = [
+        {
+            "reference": p["producto__reference"],
+            "description": p["producto__description"],
+            "cantidad": p["cantidad"],
+        }
+        for p in productos_semana_qs
+    ]
+
+    # — Gráfico Ventas últimos 7 días —
+    fechas = [hoy - timedelta(days=i) for i in range(6, -1, -1)]
+    ventas_semana = (
+        Venta.objects.filter(
+            usuario=request.user, fecha__date__gte=semana_atras, estado="activa"
+        )
+        .annotate(dia=TruncDate("fecha"))
+        .values("dia")
+        .annotate(total_dia=Sum("total"))
+        .order_by("dia")
+    )
+    mapa = {v["dia"].strftime("%d/%m"): float(v["total_dia"]) for v in ventas_semana}
+    fechas_semana = [d.strftime("%d/%m") for d in fechas]
+    serie_ventas = [mapa.get(label, 0) for label in fechas_semana]
+
+    # — Gráfico Tipos de pago (últ. 30 días) —
+    pagos_qs = (
+        Venta.objects.filter(
+            usuario=request.user, fecha__date__gte=hoy - timedelta(days=30)
+        )
+        .values("tipo_pago")
+        .annotate(cantidad=Count("id"))
+    )
+    labels_pagos = [p["tipo_pago"].capitalize() for p in pagos_qs]
+    datos_pagos = [p["cantidad"] for p in pagos_qs]
+
+    # Serializamos los arrays para Chart.js
+    context = {
+        "ventas_hoy_count": ventas_hoy_count,
+        "ventas_hoy_total": ventas_hoy_total,
+        "abonos_pendientes": abonos_pendientes,
+        "abonos_pendientes_count": abonos_pendientes_count,
+        "productos_criticos": productos_criticos,
+        "productos_agotandose_count": productos_agotandose_count,
+        "top_clients": top_clients,
+        "productos_mas_vendidos": productos_mas_vendidos,
+        "fechas_semana_json": json.dumps(fechas_semana),
+        "serie_ventas_json": json.dumps(serie_ventas),
+        "labels_pagos_json": json.dumps(labels_pagos),
+        "datos_pagos_json": json.dumps(datos_pagos),
+    }
+    return render(request, "core/vendedor/vendedor_dashboard.html", context)
 
 
 # --- CRUD Productos ---
+@login_required
+@user_passes_test(es_admin, login_url="login")
 def admin_product_list(request):
     query = request.GET.get("buscar", "").strip()
-    products = (
-        Product.objects.filter(
-            Q(reference__icontains=query) | Q(description__icontains=query)
-        )
-        if query
-        else Product.objects.all()
+    qs = Product.objects.all()
+    if query:
+        qs = qs.filter(Q(reference__icontains=query) | Q(description__icontains=query))
+    products = qs.order_by("reference")
+
+    # Total de stock
+    total_stock = products.aggregate(total_stock=Sum("stock"))["total_stock"] or 0
+
+    # Total valor de inventario = sum(purchase_price * stock)
+    total_valor_inventario = (
+        products.aggregate(
+            total_valor=Sum(
+                F("purchase_price") * F("stock"),
+                output_field=FloatField(),  # <- aquí lo usas
+            )
+        )["total_valor"]
+        or 0
     )
 
     return render(
@@ -75,7 +265,9 @@ def admin_product_list(request):
         "core/admin/products/list.html",
         {
             "products": products,
-            "todos_los_productos": Product.objects.all(),
+            "query": query,
+            "total_stock": total_stock,
+            "total_valor_inventario": total_valor_inventario,
         },
     )
 
@@ -183,20 +375,26 @@ def vendedor_cliente_list(request):
     )
 
 
+# core/views.py
 @login_required
 @user_passes_test(es_admin, login_url="login")
 def admin_cliente_list(request):
     query = request.GET.get("q", "").strip()
-    clientes = (
-        Cliente.objects.filter(Q(nombre__icontains=query) | Q(cedula__icontains=query))
-        if query
-        else Cliente.objects.all()
-    )
-
+    if query:
+        clientes = Cliente.objects.filter(
+            Q(nombre__icontains=query)
+            | Q(cedula__icontains=query)
+            | Q(email__icontains=query)
+        )
+    else:
+        clientes = Cliente.objects.all()
     return render(
         request,
         "core/admin/clientes/list.html",
-        {"clientes": clientes, "query": query},
+        {
+            "clientes": clientes,
+            "query": query,
+        },
     )
 
 
@@ -1062,3 +1260,43 @@ def cargar_productos_excel(request):
         return redirect("admin_product_list")
 
     return render(request, "core/admin/products/cargar_productos.html")
+
+
+# core/views.py
+@login_required
+@user_passes_test(es_admin, login_url="login")
+def exportar_clientes_excel(request):
+    """
+    Exporta a Excel el listado de clientes filtrado por 'q' (nombre o cédula).
+    """
+    q = request.GET.get("q", "").strip()
+
+    qs = Cliente.objects.all().order_by("nombre")
+    if q:
+        qs = qs.filter(Q(nombre__icontains=q) | Q(cedula__icontains=q))
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Clientes"
+
+    # Cabecera sin email
+    ws.append(["ID", "Nombre", "Cédula", "Teléfono", "Dirección", "Creado Por"])
+
+    for c in qs:
+        ws.append(
+            [
+                c.id,
+                c.nombre,
+                c.cedula,
+                c.telefono,
+                c.direccion,
+                c.creado_por.username if c.creado_por else "",
+            ]
+        )
+
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename="clientes.xlsx"'
+    wb.save(response)
+    return response

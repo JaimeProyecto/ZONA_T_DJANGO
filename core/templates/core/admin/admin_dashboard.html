@@ -1,23 +1,105 @@
+{# core/templates/core/admin/admin_dashboard.html #}
 {% extends 'core/base_dashboard.html' %}
-{% block title %}Reportes – ZONA T{% endblock %}
+{% block title %}Panel de Control – ZONA T{% endblock %}
+{% block header %}Panel de Control{% endblock %}
+{% load miles static %}
 
 {% block content %}
-<h2 class="text-3xl font-bold mb-6">Reportes del Sistema</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+  <!-- KPI: Clientes por vendedor -->
+  <div class="bg-zinc-800 p-6 rounded-2xl shadow-lg">
+    <h4 class="text-sm text-zinc-400">👥 Clientes por Vendedor</h4>
+    <ul class="mt-2 text-white text-sm space-y-1">
+      {% for c in clientes_por_vendedor %}
+      <li class="flex justify-between">
+        <span class="font-medium text-green-300">{{ c.creado_por__username }}</span>
+        <span class="text-white">{{ c.total }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
 
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-  <a href="{% url 'reporte_ventas_diarias' %}" class="bg-gray-800 p-6 rounded-lg shadow hover:bg-gray-700 transition">
-    <h3 class="text-xl font-semibold text-green-400 mb-2">📅 Ventas Diarias</h3>
-    <p class="text-gray-300">Consulta todas las ventas realizadas por día, con filtro de fechas y exportación a Excel.</p>
-  </a>
+  <!-- KPI: Ingresos Mensuales -->
+  <div class="bg-zinc-800 p-6 rounded-2xl shadow-lg flex flex-col justify-center">
+    <span class="text-sm text-zinc-400">📈 Ingresos Mes</span>
+    <span class="mt-2 text-3xl font-bold text-green-300">${{ ingresos_mes|formato_miles }}</span>
+  </div>
 
-  <a href="{% url 'reporte_clientes_con_deuda' %}" class="bg-gray-800 p-6 rounded-lg shadow hover:bg-gray-700 transition">
-    <h3 class="text-xl font-semibold text-yellow-400 mb-2">💰 Clientes con Deuda</h3>
-    <p class="text-gray-300">Revisa qué clientes tienen saldos pendientes y cuánto deben.</p>
-  </a>
-
-  <a href="{% url 'reporte_productos_mas_vendidos' %}" class="bg-gray-800 p-6 rounded-lg shadow hover:bg-gray-700 transition">
-    <h3 class="text-xl font-semibold text-blue-400 mb-2">📦 Productos Más Vendidos</h3>
-    <p class="text-gray-300">Analiza los productos más vendidos en cualquier periodo de tiempo.</p>
-  </a>
+  <!-- KPI: Stock Bajo -->
+  <div class="bg-zinc-800 p-6 rounded-2xl shadow-lg flex flex-col justify-center">
+    <span class="text-sm text-zinc-400">🛒 Stock Bajo (≤5)</span>
+    <span class="mt-2 text-3xl font-bold text-red-400">{{ bajo_stock }}</span>
+  </div>
 </div>
+
+<div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <!-- Gráfica Ventas Última Semana -->
+  <div class="bg-zinc-800 p-6 rounded-2xl shadow-lg">
+    <h3 class="text-lg font-semibold text-white mb-4">Ventas Última Semana</h3>
+    <canvas id="chartVentasSemana" height="200"></canvas>
+  </div>
+
+  <!-- Gráfica Tipos de Pago -->
+  <div class="bg-zinc-800 p-6 rounded-2xl shadow-lg">
+    <h3 class="text-lg font-semibold text-white mb-4">Tipos de Pago (últ. 30 días)</h3>
+    <canvas id="chartTiposPago" height="200"></canvas>
+  </div>
+</div>
+
+{# Inyectamos los JSON preparados en la vista #}
+<script>
+  const fechasSemana = {{ fechas_semana_json|safe }};
+  const serieVentas   = {{ serie_ventas_json|safe }};
+  const labelsPagos   = {{ labels_pagos_json|safe }};
+  const datosPagos    = {{ datos_pagos_json|safe }};
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Barra de Ventas Semanales
+  new Chart(
+    document.getElementById('chartVentasSemana').getContext('2d'),
+    {
+      type: 'bar',
+      data: {
+        labels: fechasSemana,
+        datasets: [{
+          label: 'Ventas',
+          data: serieVentas,
+          backgroundColor: 'rgba(34,197,94,0.7)',
+        }]
+      },
+      options: {
+        scales: {
+          y: { beginAtZero: true }
+        },
+        plugins: { legend: { display: false } }
+      }
+    }
+  );
+
+  // Donut de Tipos de Pago
+  new Chart(
+    document.getElementById('chartTiposPago').getContext('2d'),
+    {
+      type: 'doughnut',
+      data: {
+        labels: labelsPagos,
+        datasets: [{
+          data: datosPagos,
+          backgroundColor: [
+            'rgba(34,197,94,0.7)',
+            'rgba(59,130,246,0.7)',
+            'rgba(234,179,8,0.7)'
+          ]
+        }]
+      },
+      options: {
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#FFF' } }
+        }
+      }
+    }
+  );
+</script>
 {% endblock %}
