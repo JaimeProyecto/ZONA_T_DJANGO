@@ -133,4 +133,5 @@ urlpatterns = [
         views.exportar_clientes_excel,
         name="exportar_clientes_excel",
     ),
+    path("panel-admin/productos/", views.admin_product_list, name="admin_product_list"),
 ]

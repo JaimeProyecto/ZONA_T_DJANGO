@@ -329,7 +329,7 @@ def product_edit(request, producto_id):
 
                 messages.success(request, "✅ Producto actualizado correctamente.")
                 return redirect(
-                    "admin_products_list"
+                    "admin_product_list"
                 )  # Cambia esto si el nombre de la URL es diferente
             except Exception as e:
                 messages.error(request, f"Error al actualizar el producto: {str(e)}")
