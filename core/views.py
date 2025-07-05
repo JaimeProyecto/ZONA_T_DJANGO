@@ -996,43 +996,63 @@ def reporte_productos_mas_vendidos(request):
 
 
 # Exportar
-def exportar_ventas_excel(request):
-    # Recoge filtros idénticos a los de tu list view:
-    q = request.GET.get("q", "")
-    fecha_inicio = request.GET.get("fecha_inicio")
-    fecha_fin = request.GET.get("fecha_fin")
+@login_required
+@user_passes_test(es_admin, login_url="login")
+def exportar_ventas_excel(request, fecha):
+    """
+    Genera un XLSX con las ventas del día indicado (YYYY-MM-DD en la URL).
+    Incluye columna de Ganancia.
+    """
+    # 1) Parsear la fecha de la URL
+    try:
+        dia = datetime.strptime(fecha, "%Y-%m-%d").date()
+    except ValueError:
+        return HttpResponse("Formato de fecha inválido", status=400)
 
-    ventas = Venta.objects.all()
-    if q:
-        ventas = ventas.filter(
-            Q(cliente__nombre__icontains=q) | Q(numero_factura__icontains=q)
-        )
-    if fecha_inicio:
-        ventas = ventas.filter(created_at__date__gte=fecha_inicio)
-    if fecha_fin:
-        ventas = ventas.filter(created_at__date__lte=fecha_fin)
+    # 2) Queryset de ventas activas de ese día
+    ventas = Venta.objects.filter(fecha__date=dia, estado="activa").prefetch_related(
+        "items__producto"
+    )
 
-    # Ahora genera tu workbook de openpyxl...
+    # 3) Crear workbook y hoja
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.append(["# Factura", "Cliente", "Tipo de Pago", "Total", "Fecha", "Estado"])
+    ws.title = f"Ventas {fecha}"
+
+    # 4) Cabecera
+    headers = [
+        "Factura #",
+        "Cliente",
+        "Tipo Pago",
+        "Total Venta",
+        "Fecha / Hora",
+        "Ganancia",
+    ]
+    ws.append(headers)
+
+    # 5) Filas
     for v in ventas:
+        # calcular ganancia sumando (precio_venta - purchase_price) * cantidad
+        ganancia = sum(
+            (item.precio - item.producto.purchase_price) * item.cantidad
+            for item in v.items.all()
+        )
         ws.append(
             [
                 v.numero_factura,
                 v.cliente.nombre,
-                v.tipo_pago,
-                float(v.total),
-                v.created_at.strftime("%Y-%m-%d %H:%M"),
-                v.estado,
+                v.tipo_pago.capitalize(),
+                float(v.total),  # para que OpenPyXL no reclame Decimal
+                v.fecha.strftime("%Y-%m-%d %H:%M"),
+                float(ganancia),
             ]
         )
 
-    # Devuelve como attachment
+    # 6) Construir respuesta
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    response["Content-Disposition"] = "attachment; filename=ventas.xlsx"
+    response["Content-Disposition"] = f'attachment; filename="ventas_{fecha}.xlsx"'
     wb.save(response)
     return response
 

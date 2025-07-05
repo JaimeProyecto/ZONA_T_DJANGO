@@ -114,9 +114,9 @@ urlpatterns = [
         name="exportar_ventas_excel_vendedor",
     ),
     path(
-        "exportar/ventas-admin/",
-        views.exportar_ventas_excel_admin,
-        name="exportar_ventas_excel_admin",
+        "reportes/ventas-diarias/exportar/<fecha>/",
+        views.exportar_ventas_excel,
+        name="exportar_ventas_excel",
     ),
     # --- AJAX (autocompletado) ---
     path("ajax/buscar-clientes/", views.buscar_clientes, name="buscar_clientes"),
