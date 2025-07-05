@@ -76,13 +76,13 @@ class Venta(models.Model):
         if not self.numero_factura:
             # Determina prefijo según tipo de pago
             if self.tipo_pago == "credito":
-                prefijo = "FC-"
+                prefijo = "FC1-"
             elif self.tipo_pago == "transferencia":
-                prefijo = "FT-"
+                prefijo = "FT1-"
             elif self.tipo_pago == "garantia":
-                prefijo = "FG-"
+                prefijo = "FG1-"
             else:
-                prefijo = "FV-"
+                prefijo = "FV1-"
             # Cuenta ventas previas del mismo tipo y genera el secuencial
             contador = Venta.objects.filter(tipo_pago=self.tipo_pago).count() + 1
             self.numero_factura = f"{prefijo}{contador}"

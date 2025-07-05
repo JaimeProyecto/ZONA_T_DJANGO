@@ -537,8 +537,8 @@ def crear_venta(request):
 
     try:
         with transaction.atomic():
-            pref = {"credito": "FC-", "transferencia": "FT-", "garantia": "FG-"}.get(
-                tipo_pago, "FV-"
+            pref = {"credito": "FC1-", "transferencia": "FT1-", "garantia": "FG1-"}.get(
+                tipo_pago, "FV1-"
             )
             nro = Venta.objects.filter(tipo_pago=tipo_pago).count() + 1
             venta = Venta.objects.create(
