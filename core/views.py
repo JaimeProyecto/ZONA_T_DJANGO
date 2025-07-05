@@ -1244,28 +1244,8 @@ def exportar_ventas_excel_vendedor(request):
     return response
 
 
-def limpiar_valor(valor):
-    """
-    Limpia signos de moneda y retorna float o 0 si no se puede parsear.
-    """
-    if isinstance(valor, (int, float)):
-        return valor
-    s = (
-        str(valor)
-        .replace("$", "")
-        .replace(",", "")
-        .replace("(", "-")
-        .replace(")", "")
-        .strip()
-    )
-    try:
-        return float(s)
-    except ValueError:
-        return 0.0
-
-
 @login_required
-@user_passes_test(es_vendedor, login_url="login")
+@user_passes_test(es_admin, login_url="login")
 def cargar_productos_excel(request):
     if request.method == "POST" and request.FILES.get("archivo"):
         archivo = request.FILES["archivo"]
