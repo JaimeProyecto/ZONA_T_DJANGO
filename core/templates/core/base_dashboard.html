@@ -22,15 +22,14 @@
         {% endif %}
       </p>
 
-      <nav class="flex-1 space-y-2">
-        <a href="{% url 'admin_dashboard' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Inicio</a>
-
-        {% if user.is_superuser %}
+      {% if user.is_superuser %}
+          <a href="{% url 'admin_dashboard' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Inicio</a>
           <a href="{% url 'admin_product_list' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Gestión de Productos</a>
           <a href="{% url 'admin_cliente_list' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Gestión de Clientes</a>
           <a href="{% url 'venta_admin_list' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Gestión de Ventas</a>
           <a href="{% url 'saldo_pendiente_admin' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Gestión de Pagos</a>
         {% else %}
+          <a href="{% url 'vendedor_dashboard' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Inicio</a>
           <a href="{% url 'vendedor_product_list' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Gestión de Productos</a>
           <a href="{% url 'vendedor_cliente_list' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Gestión de Clientes</a>
           <a href="{% url 'venta_vendedor_list' %}" class="block px-4 py-2 hover:bg-zinc-700 rounded">Gestión de Ventas</a>
