@@ -1,63 +1,87 @@
-{% extends "core/base_dashboard.html" %}
+{# core/templates/core/admin/clientes/list.html #}
+{% extends 'core/base_dashboard.html' %}
 {% load widget_tweaks %}
 {% block title %}Clientes – ZONA T{% endblock %}
 {% block header %}Gestión de Clientes{% endblock %}
 
 {% block content %}
-  <div class="max-w-6xl mx-auto mt-8">
-    <!-- Encabezado + botón -->
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-2xl font-bold text-green-400 flex items-center gap-2">
-        📋 Lista de Clientes
-      </h2>
-      <a href="{% url 'cliente_create' %}" class="bg-green-500 hover:bg-green-600 text-black font-bold py-2 px-4 rounded">
+<div class="max-w-6xl mx-auto mt-8">
+  <!-- Encabezado + botones -->
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-2xl font-bold text-green-400 flex items-center gap-2">
+      📋 Lista de Clientes
+    </h2>
+    <div class="flex space-x-2">
+      <a href="{% url 'cliente_create' %}"
+         class="bg-green-500 hover:bg-green-600 text-black font-bold py-2 px-4 rounded">
         ➕ Registrar cliente
       </a>
-    </div>
-
-    <!-- Buscador -->
-    <form method="GET" class="mb-6">
-      <input
-        type="text"
-        name="q"
-        placeholder="Buscar por nombre o cédula..."
-        value="{{ query }}"
-        class="w-full md:w-96 px-4 py-2 rounded-lg bg-zinc-800 text-white placeholder-zinc-400 border border-zinc-600 focus:outline-none focus:ring-2 focus:ring-green-500"
-      />
-    </form>
-
-    <!-- Tabla -->
-    <div class="overflow-x-auto rounded-2xl shadow-lg">
-      <table class="w-full bg-zinc-800">
-        <thead class="bg-zinc-700 text-left text-sm text-white">
-          <tr>
-            <th class="px-4 py-2">#</th>
-            <th class="px-4 py-2">Nombre</th>
-            <th class="px-4 py-2">Teléfono</th>
-            <th class="px-4 py-2">Dirección</th>
-            <th class="px-4 py-2 text-right">Acciones</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for cliente in clientes %}
-            <tr class="border-b border-zinc-700 text-sm hover:bg-zinc-700">
-              <td class="px-4 py-2">{{ cliente.id }}</td>
-              <td class="px-4 py-2">{{ cliente.nombre }}</td>
-              <td class="px-4 py-2">{{ cliente.telefono }}</td>
-              <td class="px-4 py-2">{{ cliente.direccion }}</td>
-              <td class="px-4 py-2 text-right space-x-2 whitespace-nowrap">
-                <a href="{% url 'cliente_historial' cliente.id %}" class="text-blue-400 hover:underline">🕓 Historial</a>
-                <a href="{% url 'cliente_edit' cliente.id %}" class="text-yellow-400 hover:underline">✏️ Editar</a>
-                <a href="{% url 'cliente_delete' cliente.id %}" class="text-red-500 hover:underline">🗑 Eliminar</a>
-              </td>
-            </tr>
-          {% empty %}
-            <tr>
-              <td colspan="5" class="px-4 py-4 text-center text-zinc-400">No hay clientes registrados.</td>
-            </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      <a href="{% url 'exportar_clientes_excel' %}?q={{ query }}"
+         class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded">
+        📤 Exportar a Excel
+      </a>
     </div>
   </div>
+
+  <!-- Buscador -->
+  <form method="GET" class="mb-6 flex space-x-2">
+    <input
+      type="text"
+      name="q"
+      placeholder="Buscar por nombre, cédula o correo..."
+      value="{{ query }}"
+      class="flex-1 px-4 py-2 rounded-lg bg-zinc-800 text-white placeholder-zinc-400 border border-zinc-600 focus:outline-none focus:ring-2 focus:ring-green-500"
+    />
+    <button type="submit"
+            class="bg-green-600 hover:bg-green-700 text-black px-4 py-2 rounded">
+      🔍 Buscar
+    </button>
+  </form>
+
+  <!-- Tabla -->
+  <div class="overflow-x-auto rounded-2xl shadow-lg">
+    <table class="w-full bg-zinc-800">
+      <thead class="bg-zinc-700 text-left text-sm text-white">
+        <tr>
+          <th class="px-4 py-2">#</th>
+          <th class="px-4 py-2">Nombre</th>
+          <th class="px-4 py-2">Teléfono</th>
+          <th class="px-4 py-2">Correo</th>
+          <th class="px-4 py-2">Dirección</th>
+          <th class="px-4 py-2 text-right">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cliente in clientes %}
+        <tr class="border-b border-zinc-700 text-sm hover:bg-zinc-700">
+          <td class="px-4 py-2">{{ cliente.id }}</td>
+          <td class="px-4 py-2">{{ cliente.nombre }}</td>
+          <td class="px-4 py-2">{{ cliente.telefono }}</td>
+          <td class="px-4 py-2">{{ cliente.email }}</td>
+          <td class="px-4 py-2">{{ cliente.direccion }}</td>
+          <td class="px-4 py-2 text-right space-x-2 whitespace-nowrap">
+            <a href="{% url 'cliente_historial' cliente.id %}"
+               class="text-blue-400 hover:underline">🕓 Historial</a>
+            <a href="{% url 'cliente_edit' cliente.id %}"
+               class="text-yellow-400 hover:underline">✏️ Editar</a>
+            <a href="{% url 'cliente_delete' cliente.id %}"
+               class="text-red-500 hover:underline">🗑 Eliminar</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="px-4 py-4 text-center text-zinc-400">
+            No hay clientes registrados.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Total de clientes -->
+  <div class="mt-4 text-white">
+    <p>Total de clientes: <span class="font-semibold">{{ clientes|length }}</span></p>
+  </div>
+</div>
 {% endblock %}

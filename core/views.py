@@ -1300,3 +1300,51 @@ def exportar_clientes_excel(request):
     response["Content-Disposition"] = 'attachment; filename="clientes.xlsx"'
     wb.save(response)
     return response
+
+
+# core/views.py
+@login_required
+@user_passes_test(es_admin, login_url="login")
+def exportar_clientes_excel(request):
+    """
+    Exporta a Excel el listado de clientes filtrado por 'q' (nombre o cédula).
+    """
+    # 1) Obtener término de búsqueda
+    q = request.GET.get("q", "").strip()
+
+    # 2) Queryset inicial y posible filtro
+    qs = Cliente.objects.all().order_by("nombre")
+    if q:
+        qs = qs.filter(Q(nombre__icontains=q) | Q(cedula__icontains=q))
+
+    # 3) Crear workbook y hoja
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Clientes"
+
+    # 4) Cabecera
+    ws.append(
+        ["ID", "Nombre", "Cédula", "Teléfono", "Dirección", "Email", "Creado Por"]
+    )
+
+    # 5) Filas de datos
+    for c in qs:
+        ws.append(
+            [
+                c.id,
+                c.nombre,
+                c.cedula,
+                c.telefono,
+                c.direccion,
+                c.email or "",
+                c.creado_por.username if c.creado_por else "",
+            ]
+        )
+
+    # 6) Preparar respuesta HTTP
+    response = HttpResponse(
+        content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+    response["Content-Disposition"] = 'attachment; filename="clientes.xlsx"'
+    wb.save(response)
+    return response

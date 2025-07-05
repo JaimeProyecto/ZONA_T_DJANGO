@@ -1,8 +1,8 @@
 {% extends 'core/base_dashboard.html' %}
 {% block title %}Consulta y actualización de productos – ZONA T{% endblock %}
-{% block content %}
 {% load miles %}
 
+{% block content %}
 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
   <h2 class="text-2xl font-bold">📦 Consulta y actualización de productos</h2>
   <div class="flex flex-wrap gap-2">
@@ -15,13 +15,12 @@
   </div>
 </div>
 
-
 <form method="get" class="mb-4 flex items-center gap-2">
   <input 
     type="text" 
     name="buscar" 
     placeholder="Buscar por referencia o descripción"
-    value="{{ request.GET.buscar }}"
+    value="{{ query }}"
     class="px-4 py-2 w-full md:w-1/3 rounded bg-zinc-800 text-white border border-zinc-700 focus:outline-none"
   >
   <button type="submit" class="bg-green-600 hover:bg-green-700 text-black px-4 py-2 rounded">
@@ -30,8 +29,8 @@
 </form>
 
 <div class="overflow-x-auto">
-  <table class="min-w-full bg-zinc-800 border border-zinc-700 rounded">
-    <thead class="bg-zinc-700 text-white">
+  <table class="min-w-full bg-zinc-800 border border-zinc-700 rounded text-white text-sm">
+    <thead class="bg-zinc-700">
       <tr>
         <th class="py-2 px-4 border-b border-zinc-600 text-left">#</th>
         <th class="py-2 px-4 border-b border-zinc-600 text-left">Referencia</th>
@@ -42,25 +41,39 @@
       </tr>
     </thead>
     <tbody>
-  {% for product in products %}
-  <tr class="hover:bg-zinc-700">
-    <td class="py-2 px-4 border-b border-zinc-700">{{ forloop.counter }}</td>
-    <td class="py-2 px-4 border-b border-zinc-700">{{ product.reference }}</td>
-    <td class="py-2 px-4 border-b border-zinc-700">{{ product.description }}</td>
-    <td class="py-2 px-4 border-b border-zinc-700">${{ product.purchase_price|formato_miles }}</td>
-    <td class="py-2 px-4 border-b border-zinc-700">{{ product.stock }}</td>
-    <td class="py-2 px-4 border-b border-zinc-700">
-      <a href="{% url 'product_edit' product.id %}" class="text-green-400 hover:underline">✏️ Editar</a>
-    </td>
-  </tr>
-  {% empty %}
-  <tr>
-    <td colspan="7" class="text-center py-4 text-zinc-400">No se encontraron productos para esta búsqueda.</td>
-  </tr>
-  {% endfor %}
-</tbody>
-
+      {% for product in products %}
+      <tr class="hover:bg-zinc-700">
+        <td class="py-2 px-4 border-b border-zinc-700">{{ forloop.counter }}</td>
+        <td class="py-2 px-4 border-b border-zinc-700">{{ product.reference }}</td>
+        <td class="py-2 px-4 border-b border-zinc-700">{{ product.description }}</td>
+        <td class="py-2 px-4 border-b border-zinc-700">${{ product.purchase_price|formato_miles }}</td>
+        <td class="py-2 px-4 border-b border-zinc-700">{{ product.stock }}</td>
+        <td class="py-2 px-4 border-b border-zinc-700">
+          <a href="{% url 'product_edit' product.id %}" class="text-green-400 hover:underline">✏️ Editar</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6" class="text-center py-4 text-zinc-400">No se encontraron productos para esta búsqueda.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
   </table>
 </div>
 
+<!-- Totales y Export -->
+<div class="mt-4 flex justify-between items-center">
+  <div class="text-white font-semibold">
+    <span>Total Stock:</span>
+    <span class="ml-2">{{ total_stock }}</span>
+  </div>
+  <div class="text-white font-semibold">
+    <span>Valor Inventario:</span>
+    <span class="ml-2 text-green-300">${{ total_valor_inventario|formato_miles }}</span>
+  </div>
+  <a href="{% url 'exportar_productos_excel' %}?buscar={{ query }}"
+     class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded font-bold">
+    📤 Exportar a Excel
+  </a>
+</div>
 {% endblock %}

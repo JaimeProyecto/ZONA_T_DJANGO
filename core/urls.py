@@ -123,4 +123,14 @@ urlpatterns = [
     path("ajax/buscar-productos/", views.buscar_productos, name="buscar_productos"),
     path("ventas/<int:venta_id>/imprimir/", views.imprimir_venta, name="venta_print"),
     path("ventas/<int:venta_id>/ticket/", ticket_venta, name="venta_ticket"),
+    path(
+        "exportar/productos/",
+        views.exportar_productos_excel,
+        name="exportar_productos_excel",
+    ),
+    path(
+        "exportar/clientes/",
+        views.exportar_clientes_excel,
+        name="exportar_clientes_excel",
+    ),
 ]
