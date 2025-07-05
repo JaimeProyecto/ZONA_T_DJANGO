@@ -1302,49 +1302,39 @@ def exportar_clientes_excel(request):
     return response
 
 
-# core/views.py
 @login_required
 @user_passes_test(es_admin, login_url="login")
-def exportar_clientes_excel(request):
-    """
-    Exporta a Excel el listado de clientes filtrado por 'q' (nombre o cédula).
-    """
-    # 1) Obtener término de búsqueda
-    q = request.GET.get("q", "").strip()
-
-    # 2) Queryset inicial y posible filtro
-    qs = Cliente.objects.all().order_by("nombre")
-    if q:
-        qs = qs.filter(Q(nombre__icontains=q) | Q(cedula__icontains=q))
-
-    # 3) Crear workbook y hoja
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Clientes"
-
-    # 4) Cabecera
-    ws.append(
-        ["ID", "Nombre", "Cédula", "Teléfono", "Dirección", "Email", "Creado Por"]
+def exportar_productos_excel(request):
+    # puedes repetir el filtro por ?buscar=… si lo necesitas
+    query = request.GET.get("buscar", "").strip()
+    qs = (
+        Product.objects.filter(
+            Q(reference__icontains=query) | Q(description__icontains=query)
+        )
+        if query
+        else Product.objects.all()
     )
 
-    # 5) Filas de datos
-    for c in qs:
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Productos"
+
+    # Cabecera
+    ws.append(["Referencia", "Descripción", "Valor Compra", "Stock"])
+
+    for p in qs:
         ws.append(
             [
-                c.id,
-                c.nombre,
-                c.cedula,
-                c.telefono,
-                c.direccion,
-                c.email or "",
-                c.creado_por.username if c.creado_por else "",
+                p.reference,
+                p.description,
+                float(p.purchase_price),
+                p.stock,
             ]
         )
 
-    # 6) Preparar respuesta HTTP
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    response["Content-Disposition"] = 'attachment; filename="clientes.xlsx"'
+    response["Content-Disposition"] = 'attachment; filename="productos.xlsx"'
     wb.save(response)
     return response
