@@ -345,19 +345,6 @@ def product_delete(request, pk):
     return render(request, "core/admin/products/delete.html", {"product": prod})
 
 
-# --- Clientes ---
-@login_required
-@user_passes_test(es_admin, login_url="login")
-def venta_admin_list(request):
-    ventas = Venta.objects.all().select_related("cliente", "usuario")
-    ventas = ventas.order_by("-fecha")
-    return render(
-        request,
-        "core/admin/ventas/list.html",
-        {"ventas": ventas},
-    )
-
-
 @login_required
 @user_passes_test(es_vendedor, login_url="login")
 def vendedor_cliente_list(request):

@@ -6,12 +6,12 @@
   {# ——— Título + Botón Exportar ——— #}
   <div class="flex justify-between items-center mb-6">
     <h2 class="text-2xl font-bold text-green-400">📊 Gestión de Ventas</h2>
-    <a
-      href="{% url 'exportar_ventas_excel' %}?{{ request.GET.urlencode }}"
-      class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded font-bold"
-    >
-      📤 Exportar a Excel
-    </a>
+  <a
+    href="{% url 'exportar_ventas_excel' fecha=fecha_inicio %}?{{ request.GET.urlencode }}"
+    class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded font-bold"
+  >
+    📤 Exportar a Excel
+  </a>
   </div>
 
   {# ——— Filtros / Formulario de búsqueda ——— #}
