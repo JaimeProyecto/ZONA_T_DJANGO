@@ -1004,28 +1004,43 @@ def reporte_productos_mas_vendidos(request):
 
 
 # Exportar
-def exportar_ventas_excel(request, fecha):
-    fecha_obj = datetime.strptime(fecha, "%Y-%m-%d").date()
-    ventas = Venta.objects.filter(fecha__date=fecha_obj)
+def exportar_ventas_excel(request):
+    # Recoge filtros idénticos a los de tu list view:
+    q = request.GET.get("q", "")
+    fecha_inicio = request.GET.get("fecha_inicio")
+    fecha_fin = request.GET.get("fecha_fin")
 
+    ventas = Venta.objects.all()
+    if q:
+        ventas = ventas.filter(
+            Q(cliente__nombre__icontains=q) | Q(numero_factura__icontains=q)
+        )
+    if fecha_inicio:
+        ventas = ventas.filter(created_at__date__gte=fecha_inicio)
+    if fecha_fin:
+        ventas = ventas.filter(created_at__date__lte=fecha_fin)
+
+    # Ahora genera tu workbook de openpyxl...
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Ventas Diarias"
-
-    ws.append(["Cliente", "Fecha", "Total"])
-    for venta in ventas:
+    ws.append(["# Factura", "Cliente", "Tipo de Pago", "Total", "Fecha", "Estado"])
+    for v in ventas:
         ws.append(
             [
-                venta.cliente.nombre,
-                venta.fecha.strftime("%Y-%m-%d"),
-                float(venta.total),
+                v.numero_factura,
+                v.cliente.nombre,
+                v.tipo_pago,
+                float(v.total),
+                v.created_at.strftime("%Y-%m-%d %H:%M"),
+                v.estado,
             ]
         )
 
+    # Devuelve como attachment
     response = HttpResponse(
         content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    response["Content-Disposition"] = f"attachment; filename=ventas_{fecha}.xlsx"
+    response["Content-Disposition"] = "attachment; filename=ventas.xlsx"
     wb.save(response)
     return response
 
