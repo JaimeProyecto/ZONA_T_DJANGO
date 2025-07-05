@@ -14,10 +14,11 @@
     <a href="{% url 'exportar_clientes_deuda_excel' %}" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">📤 Exportar a Excel</a>
   </div>
 
-  <table class="w-full bg-zinc-900 rounded text-white text-sm">
-    <thead>
-      <tr class="bg-zinc-700 text-left">
-        <th class="p-3">Cliente</th>
+<div class="max-w-4xl mx-auto">
+  <table class="w-full bg-zinc-800 rounded overflow-hidden text-white text-sm">
+    <thead class="bg-zinc-700">
+      <tr>
+        <th class="p-3">Nombre</th>
         <th class="p-3">Teléfono</th>
         <th class="p-3">Ciudad</th>
         <th class="p-3">Deuda ($)</th>
@@ -25,16 +26,20 @@
     </thead>
     <tbody>
       {% for cliente in clientes %}
-        <tr class="border-t border-zinc-700 hover:bg-zinc-800 transition">
-          <td class="p-3">{{ cliente.nombre }}</td>
-          <td class="p-3">{{ cliente.telefono }}</td>
-          <td class="p-3">{{ cliente.ciudad }}</td>
-          <td class="p-3 text-red-400 font-semibold">${{ cliente.deuda_total|formato_miles }}</td>
-        </tr>
+      <tr class="border-t border-zinc-700 hover:bg-zinc-800 transition">
+        <td class="p-3">{{ cliente.nombre }}</td>
+        <td class="p-3">{{ cliente.telefono }}</td>
+        <td class="p-3">{{ cliente.ciudad }}</td>
+        <td class="p-3 text-red-400 font-semibold">
+          ${{ cliente.deuda_total|formato_miles }}
+        </td>
+      </tr>
       {% empty %}
-        <tr>
-          <td colspan="4" class="text-center text-zinc-400 py-4">No hay clientes con deudas.</td>
-        </tr>
+      <tr>
+        <td colspan="4" class="text-center text-zinc-400 py-4">
+          No hay clientes con deudas.
+        </td>
+      </tr>
       {% endfor %}
     </tbody>
   </table>

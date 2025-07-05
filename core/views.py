@@ -644,8 +644,15 @@ def venta_vendedor_detail(request, venta_id):
 @user_passes_test(es_admin, login_url="login")
 def venta_admin_list(request):
     query = request.GET.get("q", "").strip()
-    fecha_inicio = request.GET.get("fecha_inicio", "").strip()
-    fecha_fin = request.GET.get("fecha_fin", "").strip()
+    tipo_pago = request.GET.get("tipo_pago", "")
+    fecha_inicio = parse_date(
+        request.GET.get("fecha_inicio", "")
+    )  # datetime.date o None
+    fecha_fin = parse_date(request.GET.get("fecha_fin", ""))
+
+    # para usar en el template si no seleccionan fecha_inicio:
+    hoy = date.today()
+    export_fecha = (fecha_inicio or hoy).strftime("%Y-%m-%d")
 
     qs = (
         Venta.objects.select_related("cliente", "usuario")
@@ -663,18 +670,15 @@ def venta_admin_list(request):
 
     ventas = []
     for v in qs:
-        # ganancia
-        ganancia = sum(
+        v.ganancia = sum(
             (item.precio - item.producto.purchase_price) * item.cantidad
             for item in v.items.all()
         )
-        # último abono
         ultimo = v.abonos.order_by("-fecha").first()
-        v.ultimo_abono_por = (
-            ultimo.usuario.username if (ultimo and ultimo.usuario) else None
-        )
         v.ultimo_abono_monto = ultimo.monto if ultimo else None
-        v.ganancia = ganancia
+        v.ultimo_abono_por = (
+            ultimo.usuario.username if ultimo and ultimo.usuario else None
+        )
         ventas.append(v)
 
     total_ventas = sum(v.total for v in ventas)
@@ -686,10 +690,11 @@ def venta_admin_list(request):
         {
             "ventas": ventas,
             "query": query,
-            "fecha_inicio": fecha_inicio,
-            "fecha_fin": fecha_fin,
+            "fecha_inicio": fecha_inicio and fecha_inicio.strftime("%Y-%m-%d"),
+            "fecha_fin": fecha_fin and fecha_fin.strftime("%Y-%m-%d"),
             "total_ventas": total_ventas,
             "total_ganancias": total_ganancias,
+            "export_fecha": export_fecha,  # ← pasamos este valor al template
         },
     )
 
