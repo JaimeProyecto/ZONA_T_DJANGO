@@ -30,6 +30,15 @@ from django.utils.dateparse import parse_date
 from .decorators import es_admin, es_vendedor
 from .forms import AbonoForm, ClienteForm, ProductForm
 from .models import Abono, Cliente, Product, Venta, VentaItem
+from django.contrib.auth.models import Group
+
+
+def es_vendedor(user):
+    return user.is_authenticated and user.groups.filter(name="vendedor").exists()
+
+
+def es_admin(user):
+    return user.is_authenticated and user.groups.filter(name="admin").exists()
 
 
 # --- Login y redirección por rol ---
@@ -334,15 +343,6 @@ def product_delete(request, pk):
         prod.delete()
         return redirect("admin_product_list")
     return render(request, "core/admin/products/delete.html", {"product": prod})
-
-
-# utils para validar roles
-def es_admin(user):
-    return user.is_authenticated and user.is_superuser
-
-
-def es_vendedor(user):
-    return user.is_authenticated and not user.is_superuser
 
 
 # --- Clientes ---
