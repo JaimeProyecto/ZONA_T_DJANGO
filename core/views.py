@@ -527,8 +527,18 @@ def crear_venta(request):
 
     data = request.POST
     cliente_id = data.get("cliente")
-    productos_json = json.loads(data.get("productos_data", "[]"))
-    descuento = Decimal(data.get("descuento", "0").replace(".", ""))
+    try:
+        productos_json = json.loads(data.get("productos_data", "[]"))
+    except json.JSONDecodeError:
+        messages.error(request, "❌ Datos de productos inválidos.")
+        return redirect("venta_create")
+
+    # parseo seguro de descuento
+    try:
+        descuento = Decimal(data.get("descuento", "0"))
+    except (InvalidOperation, TypeError):
+        descuento = Decimal("0")
+
     tipo_pago = data.get("tipo_pago", "contado")
 
     if not cliente_id or not productos_json:
@@ -537,36 +547,41 @@ def crear_venta(request):
 
     try:
         with transaction.atomic():
-            pref = {"credito": "FC1-", "transferencia": "FT1-", "garantia": "FG1-"}.get(
-                tipo_pago, "FV1-"
-            )
+            cliente = get_object_or_404(Cliente, pk=cliente_id)
+
+            pref_map = {
+                "credito": "FC-",
+                "transferencia": "FT-",
+                "garantia": "FG-",
+            }
+            pref = pref_map.get(tipo_pago, "FV-")
             nro = Venta.objects.filter(tipo_pago=tipo_pago).count() + 1
             venta = Venta.objects.create(
-                cliente_id=cliente_id,
+                cliente=cliente,
                 numero_factura=f"{pref}{nro}",
                 tipo_pago=tipo_pago,
                 usuario=request.user,
             )
 
-            bruto = Decimal(0)
+            bruto = Decimal("0")
             for itm in productos_json:
-                prod = Product.objects.get(pk=itm["producto_id"])
+                pid = int(itm["producto_id"])
+                prod = Product.objects.select_for_update().get(pk=pid)
                 cant = int(itm["cantidad"])
                 precio = Decimal(str(itm.get("precio", "0")))
 
                 if prod.stock < cant:
-                    raise ValueError(f"Stock insuficiente {prod.reference}")
+                    raise ValueError(f"Stock insuficiente para {prod.reference}")
 
-                sub = precio * cant
                 VentaItem.objects.create(
                     venta=venta, producto=prod, cantidad=cant, precio=precio
                 )
                 prod.stock -= cant
-                prod.save()
-                bruto += sub
+                prod.save(update_fields=["stock"])
+                bruto += precio * cant
 
-            venta.total = max(bruto - descuento, Decimal(0))
-            venta.save()
+            venta.total = max(bruto - descuento, Decimal("0"))
+            venta.save(update_fields=["total"])
 
         messages.success(request, f"✅ Venta #{venta.numero_factura} registrada.")
         return redirect("venta_vendedor_list")

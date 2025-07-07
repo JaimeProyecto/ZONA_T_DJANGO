@@ -74,6 +74,10 @@
     .right {
       text-align: right;
     }
+    td {
+    white-space: normal;
+    word-break: break-word;
+    }
   </style>
 
   <script>
@@ -141,7 +145,7 @@
   <div class="separator"></div>
 
   {# Tabla de ítems #}
-  <table>
+   <table>
     <thead>
       <tr>
         <th>Ref</th>
@@ -153,14 +157,15 @@
     <tbody>
       {% for item in venta.items.all %}
       <tr>
-        <td>{{ item.producto.reference|slice:":6" }}</td>
-        <td>{{ item.producto.description|slice:":12" }}</td>
+        <td>{{ item.producto.reference }}</td>
+        <td>{{ item.producto.description }}</td>
         <td class="right">{{ item.cantidad }}</td>
         <td class="right">{{ item.precio|formato_miles }}</td>
       </tr>
       {% endfor %}
     </tbody>
   </table>
+
   <div class="separator"></div>
 
   {# Total #}

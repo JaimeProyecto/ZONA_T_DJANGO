@@ -1,11 +1,13 @@
 {% extends 'core/base_dashboard.html' %}
+
 {% block title %}Registrar Venta{% endblock %}
+
 {% block content %}
 
 <div class="max-w-4xl mx-auto mt-8">
   <h2 class="text-2xl font-bold text-green-400 mb-4">➕ Registrar Venta</h2>
 
-  <form method="post">
+  <form method="post" id="venta-form">
     {% csrf_token %}
 
     <!-- Cliente -->
@@ -48,26 +50,15 @@
       class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded"
     >➕ Agregar Producto</button>
 
-    <!-- Descuento -->
-    <div class="mt-4 mb-4 flex items-center space-x-2">
-      <label class="text-green-400 font-semibold">🏷️ Descuento:</label>
-      <input
-        type="text"
-        id="descuento-input"
-        name="descuento"
-        value="0"
-        placeholder="0"
-        class="w-1/3 p-2 bg-gray-900 border border-green-500 rounded text-white"
-        oninput="formatMilesInput(this)"
-      >
-    </div>
-
-    <script>
-      function formatMilesInput(el) {
-        let onlyNums = el.value.replace(/\D/g, '');
-        el.value = onlyNums.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-      }
-    </script>
+    <!-- Descuento oculto -->
+    <input
+      type="number"
+      name="descuento"
+      id="descuento-input"
+      value="0"
+      min="0"
+      style="display: none;"
+    >
 
     <!-- Total -->
     <div class="mt-4">
@@ -88,197 +79,191 @@
 </div>
 
 <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    function formatoMiles(n) {
-      return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0 }).format(n);
-    }
+document.addEventListener("DOMContentLoaded", () => {
+  // formateo de miles
+  function formatoMiles(n) {
+    return new Intl.NumberFormat('de-DE', { minimumFractionDigits: 0 }).format(n);
+  }
 
-    let index = 0;
-    const container      = document.getElementById("productos-container");
-    const totalEl        = document.getElementById("total");
-    const productosData  = document.getElementById("productos-data");
-    const descuentoInput = document.getElementById("descuento-input");
+  let index = 0;
+  const container      = document.getElementById("productos-container");
+  const totalEl        = document.getElementById("total");
+  const productosData  = document.getElementById("productos-data");
+  const descuentoInput = document.getElementById("descuento-input");
+  const form           = document.getElementById("venta-form");
+  const clienteInput   = document.getElementById("cliente-autocomplete");
+  const clienteList    = document.getElementById("cliente-sugerencias");
 
-    // Agregar línea de producto
-    document.getElementById("agregar-producto").addEventListener("click", () => {
-      const div = document.createElement("div");
-      div.className = "producto bg-zinc-800 p-4 rounded shadow-md";
-      div.dataset.index = index;
-      div.innerHTML = `
-        <div class="relative mb-2">
-          <input
-            type="text"
-            class="producto-autocomplete w-full p-2 bg-gray-900 border border-green-500 rounded text-white"
-            placeholder="Buscar producto..."
-            data-index="${index}"
-            autocomplete="off"
-          >
-          <input type="hidden" class="producto-id" data-index="${index}">
-          <div class="sugerencias-producto hidden absolute w-full bg-zinc-800 border border-zinc-600 rounded mt-1 z-50 text-white"></div>
-        </div>
-        <div class="flex items-center gap-2">
-          <input
-            type="number"
-            step="0.01"
-            class="precio-input w-1/3 p-2 bg-gray-900 border border-green-500 rounded text-white"
-            data-index="${index}"
-            placeholder="Precio"
-            required
-          >
-          <input
-            type="number"
-            min="1"
-            value="1"
-            class="cantidad-input w-1/3 p-2 bg-gray-900 border border-green-500 rounded text-white"
-            data-index="${index}"
-            placeholder="Cant."
-          >
-        </div>
-        <div class="mt-2">
-          <span class="text-green-300 font-semibold">
-            Subtotal: $<span class="subtotal" data-index="${index}">0</span>
-          </span>
-        </div>
-        <button type="button" class="remover-linea mt-2 text-red-400 hover:underline">Eliminar</button>
-      `;
-      container.appendChild(div);
-      index++;
+  // recálculo justo antes de enviar
+  form.addEventListener("submit", () => recalcularTotal());
+
+  // Agregar nueva línea de producto
+  document.getElementById("agregar-producto").addEventListener("click", () => {
+    const div = document.createElement("div");
+    div.className = "producto bg-zinc-800 p-4 rounded shadow-md";
+    div.dataset.index = index;
+    div.innerHTML = `
+      <div class="relative mb-2">
+        <input
+          type="text"
+          class="producto-autocomplete w-full p-2 bg-gray-900 border border-green-500 rounded text-white"
+          placeholder="Buscar producto..."
+          data-index="${index}"
+          autocomplete="off"
+        >
+        <input type="hidden" class="producto-id" data-index="${index}">
+        <div class="sugerencias-producto hidden absolute w-full bg-zinc-800 border border-zinc-600 rounded mt-1 z-50 text-white"></div>
+      </div>
+      <div class="flex items-center gap-2">
+        <input
+          type="number"
+          step="0.01"
+          class="precio-input w-1/3 p-2 bg-gray-900 border border-green-500 rounded text-white"
+          data-index="${index}"
+          placeholder="Precio"
+          required
+        >
+        <input
+          type="number"
+          min="1"
+          value="1"
+          class="cantidad-input w-1/3 p-2 bg-gray-900 border border-green-500 rounded text-white"
+          data-index="${index}"
+          placeholder="Cant."
+        >
+      </div>
+      <div class="mt-2">
+        <span class="text-green-300 font-semibold">
+          Subtotal: $<span class="subtotal" data-index="${index}">0</span>
+        </span>
+      </div>
+      <button type="button" class="remover-linea mt-2 text-red-400 hover:underline">Eliminar</button>
+    `;
+    container.appendChild(div);
+    index++;
+  });
+
+  // recálculo de totales (incluye descuento)
+  function recalcularTotal() {
+    let bruto = 0;
+    const lista = [];
+
+    document.querySelectorAll(".producto").forEach(div => {
+      const i    = div.dataset.index;
+      const pid  = div.querySelector(`.producto-id[data-index="${i}"]`).value;
+      const cant = parseInt(div.querySelector(`.cantidad-input[data-index="${i}"]`).value) || 0;
+      const pre  = parseFloat(div.querySelector(`.precio-input[data-index="${i}"]`).value) || 0;
+      const sub  = cant * pre;
+      div.querySelector(`.subtotal[data-index="${i}"]`).textContent = formatoMiles(sub);
+      if (pid && cant > 0) {
+        bruto += sub;
+        lista.push({ producto_id: pid, cantidad: cant, precio: pre });
+      }
     });
 
-    // Recalcular totales
-    function recalcularTotal() {
-      let bruto = 0;
-      const lista = [];
+    const desc = parseFloat(descuentoInput.value) || 0;
+    const neto = Math.max(0, bruto - desc);
+    totalEl.textContent = formatoMiles(neto);
+    productosData.value = JSON.stringify(lista);
+  }
 
-      document.querySelectorAll(".producto").forEach(div => {
-        const i    = div.dataset.index;
-        const pid  = div.querySelector(`.producto-id[data-index="${i}"]`).value;
-        const cant = parseInt(div.querySelector(`.cantidad-input[data-index="${i}"]`).value) || 0;
-        const pre  = parseFloat(div.querySelector(`.precio-input[data-index="${i}"]`).value) || 0;
-        const sub  = cant * pre;
-
-        div.querySelector(`.subtotal[data-index="${i}"]`).textContent = formatoMiles(sub);
-        if (pid && cant > 0) {
-          bruto += sub;
-          lista.push({ producto_id: pid, cantidad: cant, precio: pre });
-        }
-      });
-
-      const descRaw = descuentoInput.value.replace(/\./g, '');
-      const desc    = parseFloat(descRaw) || 0;
-      const neto    = Math.max(0, bruto - desc);
-
-      totalEl.textContent = formatoMiles(neto);
-      productosData.value = JSON.stringify(lista);
+  // validar stock
+  function validarCantidad(idx) {
+    const cantEl = document.querySelector(`.cantidad-input[data-index="${idx}"]`);
+    const autoEl = document.querySelector(`.producto-autocomplete[data-index="${idx}"]`);
+    const stock  = parseInt(autoEl.dataset.stock) || 0;
+    let cant      = parseInt(cantEl.value) || 0;
+    if (cant > stock) {
+      alert("❌ La cantidad excede el stock disponible.");
+      cantEl.value = stock;
+      cant = stock;
     }
+    recalcularTotal();
+  }
 
-    // Validar cantidad vs stock
-    function validarCantidad(idx) {
-      const cantEl    = document.querySelector(`.cantidad-input[data-index="${idx}"]`);
-      const autoEl    = document.querySelector(`.producto-autocomplete[data-index="${idx}"]`);
-      const stock     = parseInt(autoEl.dataset.stock) || 0;
-      let cant        = parseInt(cantEl.value) || 0;
-
-      if (cant > stock) {
-        alert("❌ La cantidad excede el stock disponible.");
-        cantEl.value = stock;
-        cant = stock;
-      }
+  // handlers globales
+  document.addEventListener("input", e => {
+    if (e.target.matches(".cantidad-input") || e.target.matches(".precio-input")) recalcularTotal();
+    if (e.target.matches(".cantidad-input")) validarCantidad(e.target.dataset.index);
+  });
+  container.addEventListener("click", e => {
+    if (e.target.matches(".remover-linea")) {
+      e.target.closest(".producto").remove();
       recalcularTotal();
     }
-
-    // Delegaciones de eventos
-    document.addEventListener("input", e => {
-      if (e.target.matches(".cantidad-input") || e.target.matches(".precio-input")) {
-        recalcularTotal();
-      }
-      if (e.target.matches(".cantidad-input")) {
-        validarCantidad(e.target.dataset.index);
-      }
-      if (e.target === descuentoInput) {
-        recalcularTotal();
-      }
-    });
-
-    container.addEventListener("click", e => {
-      if (e.target.matches(".remover-linea")) {
-        e.target.closest(".producto").remove();
-        recalcularTotal();
-      }
-    });
-
-    // Autocomplete Cliente
-    document.getElementById("cliente-autocomplete")
-      .addEventListener("input", async function(){
-        const q = this.value.trim();
-        const lista = document.getElementById("cliente-sugerencias");
-        if (q.length < 2) return lista.classList.add("hidden");
-        const res = await fetch(`/ajax/buscar-clientes/?q=${encodeURIComponent(q)}`);
-        const data = await res.json();
-        lista.innerHTML = "";
-        data.forEach(c => {
-          const div = document.createElement("div");
-          div.textContent = `${c.nombre} (${c.cedula})`;
-          div.className   = "p-2 hover:bg-zinc-700 cursor-pointer";
-          div.onclick     = () => {
-            this.value = div.textContent;
-            document.getElementById("cliente-id").value = c.id;
-            lista.classList.add("hidden");
-          };
-          lista.appendChild(div);
-        });
-        lista.classList.remove("hidden");
-      });
-
-    // Autocomplete Producto + mostrar stock
-    document.addEventListener("input", async e => {
-      if (!e.target.matches(".producto-autocomplete")) return;
-      const q     = e.target.value.trim();
-      const idx   = e.target.dataset.index;
-      const lista = e.target.nextElementSibling.nextElementSibling;
-      if (q.length < 2) return lista.classList.add("hidden");
-
-      const res  = await fetch(`/ajax/buscar-productos/?q=${encodeURIComponent(q)}`);
-      const data = await res.json();
-      lista.innerHTML = "";
-
-      data.forEach(p => {
-        const div = document.createElement("div");
-        div.textContent = `${p.reference} - ${p.description}`;
-        div.className   = "p-2 hover:bg-zinc-700 cursor-pointer";
-        div.onclick     = () => {
-          if (Array.from(document.querySelectorAll(".producto-id")).
-                   some(el => el.value == p.id)) {
-            alert("⚠️ Este producto ya fue agregado.");
-            lista.classList.add("hidden");
-            return;
-          }
-          e.target.value = div.textContent;
-          document.querySelector(`.producto-id[data-index="${idx}"]`).value = p.id;
-          e.target.dataset.stock  = p.stock;
-
-          const precioInput = document.querySelector(`.precio-input[data-index="${idx}"]`);
-          if (precioInput) precioInput.value = '';
-
-          const productoDiv = e.target.closest(".producto");
-          let lbl = productoDiv.querySelector(`.stock-label[data-index="${idx}"]`);
-          if (!lbl) {
-            lbl = document.createElement("div");
-            lbl.className = "stock-label text-sm text-green-300 font-mono mb-1";
-            lbl.dataset.index = idx;
-            productoDiv.querySelector(".flex.items-center.gap-2").prepend(lbl);
-          }
-          lbl.textContent = `📦 Stock: ${p.stock}`;
-
-          lista.classList.add("hidden");
-        };
-        lista.appendChild(div);
-      });
-
-      lista.classList.remove("hidden");
-    });
-
   });
+
+  // Autocomplete Cliente
+  clienteInput.addEventListener("input", async () => {
+    const q = clienteInput.value.trim();
+    if (q.length < 2) return clienteList.classList.add("hidden");
+    const res  = await fetch(`/ajax/buscar-clientes/?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    clienteList.innerHTML = "";
+    data.forEach(c => {
+      const item = document.createElement("div");
+      item.textContent = `${c.nombre} (${c.cedula})`;
+      item.className   = "p-2 hover:bg-zinc-700 cursor-pointer";
+      item.onclick     = () => {
+        clienteInput.value = item.textContent;
+        document.getElementById("cliente-id").value = c.id;
+        clienteList.classList.add("hidden");
+      };
+      clienteList.appendChild(item);
+    });
+    clienteList.classList.remove("hidden");
+  });
+  // oculta sugerencias cliente al click fuera
+  document.addEventListener("click", ev => {
+    if (!ev.target.closest("#cliente-autocomplete")) {
+      clienteList.classList.add("hidden");
+    }
+  });
+
+  // Autocomplete Producto con delegación
+  container.addEventListener("input", async e => {
+    if (!e.target.matches(".producto-autocomplete")) return;
+    const input       = e.target;
+    const idx         = input.dataset.index;
+    const sugerencias = input.parentElement.querySelector(".sugerencias-producto");
+    const q           = input.value.trim();
+    if (q.length < 2) return sugerencias.classList.add("hidden");
+    const res  = await fetch(`/ajax/buscar-productos/?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    sugerencias.innerHTML = "";
+    data.forEach(p => {
+      const item = document.createElement("div");
+      item.className     = "p-2 hover:bg-zinc-700 cursor-pointer";
+      item.textContent   = `${p.reference} - ${p.description}`;
+      item.dataset.id    = p.id;
+      item.dataset.stock = p.stock;
+      sugerencias.appendChild(item);
+    });
+    sugerencias.classList.remove("hidden");
+    sugerencias.onclick = ev => {
+      const sel = ev.target;
+      if (!sel.dataset.id) return;
+      input.value = sel.textContent;
+      document.querySelector(`.producto-id[data-index="${idx}"]`).value = sel.dataset.id;
+      input.dataset.stock = sel.dataset.stock;
+      sugerencias.classList.add("hidden");
+      recalcularTotal();
+    };
+  });
+  // oculta sugerencias producto al blur y click fuera
+  container.addEventListener("blur", ev => {
+    if (ev.target.matches(".producto-autocomplete")) {
+      setTimeout(() => {
+        ev.target.parentElement.querySelector(".sugerencias-producto").classList.add("hidden");
+      }, 150);
+    }
+  }, true);
+  document.addEventListener("click", ev => {
+    if (!ev.target.closest(".producto")) {
+      document.querySelectorAll(".sugerencias-producto").forEach(el => el.classList.add("hidden"));
+    }
+  });
+});
 </script>
 
 {% endblock %}
