@@ -37,7 +37,9 @@
         <td class="px-4 py-2 text-right text-yellow-400">${{ venta.saldo_pendiente|formato_miles }}</td>
         <td class="px-4 py-2 text-right">
           {% if venta.ultimo_abono_monto %}
-            ${{ venta.ultimo_abono_monto|formato_miles }}
+            {% localtime on %}
+              ${{ venta.ultimo_abono_monto|formato_miles }}
+            {% endlocaltime %}
           {% else %}
             —
           {% endif %}

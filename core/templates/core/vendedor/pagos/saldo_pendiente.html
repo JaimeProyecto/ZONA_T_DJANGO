@@ -1,6 +1,7 @@
 {% extends "core/base_dashboard.html" %}
 {% block title %}Saldo Pendiente{% endblock %}
 {% load miles %}
+{% load tz %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto bg-gray-800 p-6 rounded shadow">
@@ -45,7 +46,9 @@
         <td class="px-4 py-2">{{ venta.ultimo_abono_por|default:"—" }}</td>
         <td class="px-4 py-2">
           {% if venta.ultimo_abono_fecha %}
-            {{ venta.ultimo_abono_fecha|date:"d/m/Y H:i" }}
+            {% localtime on %}
+              {{ venta.ultimo_abono_fecha|date:"d/m/Y H:i" }}
+            {% endlocaltime %}
           {% else %}
             —
           {% endif %}

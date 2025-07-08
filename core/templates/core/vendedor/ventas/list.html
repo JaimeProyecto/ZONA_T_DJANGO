@@ -1,6 +1,7 @@
 {% extends "core/base_dashboard.html" %}
 {% block title %}Mis Ventas{% endblock %}
 {% load miles %}
+{% load tz %}
 
 {% block content %}
 <div class="flex justify-between items-center mb-6">
@@ -46,7 +47,7 @@
       <td class="px-4 py-2">{{ venta.cliente.nombre }}</td>
       <td class="px-4 py-2">{{ venta.tipo_pago|capfirst }}</td>
       <td class="px-4 py-2 text-right">${{ venta.total|formato_miles }}</td>
-      <td class="px-4 py-2">{{ venta.created_at|date:"Y-m-d H:i" }}</td>
+      <td class="px-6 py-4 whitespace-nowrap"> {% localtime on %} {{ venta.fecha|date:"d/m/Y H:i" }} {% endlocaltime %} </td>
       <td class="px-4 py-2">
         <span class="{% if venta.estado == 'activa' %}text-green-400{% else %}text-red-400{% endif %}">
           {{ venta.estado|capfirst }}
