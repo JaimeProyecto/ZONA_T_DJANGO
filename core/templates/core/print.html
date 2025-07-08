@@ -1,6 +1,9 @@
 {# core/templates/core/ventas/print.html #}
 {% load static %}
 {% load miles %}
+{% load tz %}
+
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -132,7 +135,7 @@
   {# Detalles de la venta #}
   <div class="field">
     <span class="label">Fecha:</span>
-    <span class="value">{{ venta.fecha|date:"d/m/Y H:i" }}</span>
+    <span class="value"> {{ venta.fecha|localtime|date:"d/m/Y H:i" }} </span>
   </div>
   <div class="field">
     <span class="label">Factura:</span>
